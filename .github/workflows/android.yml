@@ -26,8 +26,12 @@ jobs:
           cache: 'gradle'
 
       - name: Grant Execute Permissions for Gradle
-        run: chmod +x gradlew
-        continue-on-error: true # Just in case gradlew is not present initially
+        run: |
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+          else
+            echo "gradlew wrapper not found, relying on system-installed gradle."
+          fi
 
       - name: Build Debug APK (For CI validation)
         run: gradle assembleDebug
