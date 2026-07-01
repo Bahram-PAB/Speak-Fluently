@@ -33,6 +33,16 @@ jobs:
             echo "gradlew wrapper not found, relying on system-installed gradle."
           fi
 
+      - name: Set up Debug Keystore
+        run: |
+          if [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+            echo "Decoded debug.keystore from base64"
+          else
+            echo "No debug.keystore.base64 found! Generating a new one..."
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Build Debug APK (For CI validation)
         run: gradle assembleDebug
 
