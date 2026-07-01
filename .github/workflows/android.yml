@@ -76,8 +76,32 @@ jobs:
       - name: Copy Release Artifacts
         run: |
           mkdir -p release-artifacts
-          cp app/build/outputs/apk/release/app-release-unsigned.apk release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.apk || cp app/build/outputs/apk/release/app-release.apk release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.apk || cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}-debug.apk
-          cp app/build/outputs/bundle/release/app-release-unsigned.aab release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.aab || cp app/build/outputs/bundle/release/app-release.aab release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.aab || true
+          
+          # Copy APK
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            echo "Copying signed release APK..."
+            cp app/build/outputs/apk/release/app-release.apk release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.apk
+          elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            echo "Copying unsigned release APK..."
+            cp app/build/outputs/apk/release/app-release-unsigned.apk release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.apk
+          elif [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "Copying debug APK..."
+            cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}-debug.apk
+          else
+            echo "No APK found!"
+            exit 1
+          fi
+          
+          # Copy AAB
+          if [ -f app/build/outputs/bundle/release/app-release.aab ]; then
+            echo "Copying signed release AAB..."
+            cp app/build/outputs/bundle/release/app-release.aab release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.aab
+          elif [ -f app/build/outputs/bundle/release/app-release-unsigned.aab ]; then
+            echo "Copying unsigned release AAB..."
+            cp app/build/outputs/bundle/release/app-release-unsigned.aab release-artifacts/SpeakFluently-${{ steps.get_version.outputs.VERSION_NAME }}.aab
+          else
+            echo "No AAB found!"
+          fi
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
