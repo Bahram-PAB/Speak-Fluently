@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">Speak Fluently</string>
+    <string name="app_tagline">Improve your speaking skills</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_practice">Practice</string>
+    <string name="nav_premium">Premium</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Audio Packages</string>
+    <string name="home_subtitle">Choose a package to practice English speaking</string>
+    <string name="start_practice">Start Practice</string>
+    <string name="download_required">Download Required</string>
+    <string name="downloading">Downloading (%1$d%%)</string>
+    <string name="download_ready">Download Ready</string>
+    <string name="premium_locked">Premium Feature</string>
+    <string name="premium_locked_desc">Unlock this package by activating Premium in the Premium tab.</string>
+
+    <!-- Player / Practice Screen -->
+    <string name="practice_session">Practice Session</string>
+    <string name="question_count">Questions: %1$d of %2$d</string>
+    <string name="pause_timer">Pause time remaining: %1$d seconds</string>
+    <string name="listen_and_speak">Listen and respond now</string>
+    <string name="button_pause">Pause</string>
+    <string name="button_resume">Resume</string>
+    <string name="button_skip">Skip</string>
+    <string name="button_finish">Finish Session</string>
+    <string name="session_completed">Session Completed!</string>
+    <string name="session_completed_desc">Great job practicing today. Consistency is key to fluency!</string>
+    <string name="back_to_home">Back to Home</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Practice Settings</string>
+    <string name="language_section">App Language</string>
+    <string name="questions_per_session_label">Questions per session</string>
+    <string name="pause_duration_label">Pause duration between questions</string>
+    <string name="notification_settings">Daily Reminders</string>
+    <string name="enable_notifications">Enable Practice Reminders</string>
+    <string name="reminder_time_label">Reminder Time</string>
+    <string name="save_settings_btn">Save Settings</string>
+    <string name="settings_saved_success">Settings updated successfully!</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_title">Unlock Speak Fluently Premium</string>
+    <string name="premium_subtitle">Unlock all IELTS, job interview, and advanced conversational packages.</string>
+    <string name="premium_code_label">Enter One-Time Activation Code</string>
+    <string name="premium_code_placeholder">e.g., SPEAK2026</string>
+    <string name="premium_activate_btn">Activate Premium</string>
+    <string name="premium_success">Premium activated! Thank you for your support.</string>
+    <string name="premium_invalid_code">Invalid activation code. Try SPEAK2026, FLUENT, or FREEPASS.</string>
+    <string name="premium_active_status">Premium Status: Active</string>
+    <string name="premium_future_features">Upcoming Premium Features (Beta):</string>
+    <string name="voice_recording">✓ Smart Voice Recording &amp; Playback</string>
+    <string name="custom_host">✓ Custom Audio Host Servers</string>
+    <string name="ai_integration">✓ AI Pronunciation Assessment</string>
+
+    <!-- Notifications -->
+    <string name="notification_title">Time for English Practice!</string>
+    <string name="notification_body">Daily practice keeps your speaking skills sharp. Let\'s practice now!</string>
+    <string name="notification_action_start">Start Practice</string>
+</resources>

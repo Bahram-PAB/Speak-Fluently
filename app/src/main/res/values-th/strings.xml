@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">Speak Fluently</string>
+    <string name="app_tagline">ปรับปรุงทักษะการพูดของคุณ</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">หน้าแรก</string>
+    <string name="nav_practice">ฝึกฝน</string>
+    <string name="nav_premium">พรีเมียม</string>
+    <string name="nav_settings">ตั้งค่า</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">แพ็กเกจเสียง</string>
+    <string name="home_subtitle">เลือกแพ็กเกจเพื่อฝึกพูดภาษาอังกฤษ</string>
+    <string name="start_practice">เริ่มฝึกฝน</string>
+    <string name="download_required">ต้องดาวน์โหลด</string>
+    <string name="downloading">กำลังดาวน์โหลด (%1$d%%)</string>
+    <string name="download_ready">พร้อมเล่น</string>
+    <string name="premium_locked">คุณสมบัติพรีเมียม</string>
+    <string name="premium_locked_desc">ปลดล็อกแพ็กเกจนี้โดยเปิดใช้งานพรีเมียมในแท็บพรีเมียม</string>
+
+    <!-- Player / Practice Screen -->
+    <string name="practice_session">เซสชันการฝึกฝน</string>
+    <string name="question_count">คำถาม: %1$d จาก %2$d</string>
+    <string name="pause_timer">เวลาพักที่เหลือ: %1$d วินาที</string>
+    <string name="listen_and_speak">ฟังและตอบคำถามตอนนี้</string>
+    <string name="button_pause">หยุดชั่วคราว</string>
+    <string name="button_resume">เล่นต่อ</string>
+    <string name="button_skip">ข้าม</string>
+    <string name="button_finish">เสร็จสิ้นเซสชัน</string>
+    <string name="session_completed">เสร็จสิ้นเซสชันแล้ว!</string>
+    <string name="session_completed_desc">ทำได้ดีมากในการฝึกฝนวันนี้ ความสม่ำเสมอคือหัวใจสำคัญของความคล่องแคล่ว!</string>
+    <string name="back_to_home">กลับสู่หน้าหลัก</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">ตั้งค่าการฝึกฝน</string>
+    <string name="language_section">ภาษาของแอป</string>
+    <string name="questions_per_session_label">จำนวนคำถามต่อเซสชัน</string>
+    <string name="pause_duration_label">ระยะเวลาหยุดชั่วคราวระหว่างคำถาม</string>
+    <string name="notification_settings">แจ้งเตือนรายวัน</string>
+    <string name="enable_notifications">เปิดใช้งานแจ้งเตือนการฝึกฝน</string>
+    <string name="reminder_time_label">เวลาแจ้งเตือน</string>
+    <string name="save_settings_btn">บันทึกการตั้งค่า</string>
+    <string name="settings_saved_success">อัปเดตการตั้งค่าสำเร็จแล้ว!</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_title">ปลดล็อก Speak Fluently Premium</string>
+    <string name="premium_subtitle">ปลดล็อกแพ็กเกจ IELTS, การสัมภาษณ์งาน และการสนทนาขั้นสูงทั้งหมด</string>
+    <string name="premium_code_label">ป้อนรหัสเปิดใช้งานแบบใช้ครั้งเดียว</string>
+    <string name="premium_code_placeholder">เช่น SPEAK2026</string>
+    <string name="premium_activate_btn">เปิดใช้งานพรีเมียม</string>
+    <string name="premium_success">เปิดใช้งานพรีเมียมแล้ว! ขอบคุณสำหรับการสนับสนุนของคุณ</string>
+    <string name="premium_invalid_code">รหัสเปิดใช้งานไม่ถูกต้อง ลองใช้ SPEAK2026, FLUENT หรือ FREEPASS</string>
+    <string name="premium_active_status">สถานะพรีเมียม: เปิดใช้งานแล้ว</string>
+    <string name="premium_future_features">ฟีเจอร์พรีเมียมในอนาคต (เบต้า):</string>
+    <string name="voice_recording">✓ บันทึกเสียงและเล่นกลับอัจฉริยะ</string>
+    <string name="custom_host">✓ โฮสต์เซิร์ฟเวอร์เสียงที่กำหนดเอง</string>
+    <string name="ai_integration">✓ การประเมินการออกเสียงด้วย AI</string>
+
+    <!-- Notifications -->
+    <string name="notification_title">ได้เวลาฝึกพูดภาษาอังกฤษแล้ว!</string>
+    <string name="notification_body">การฝึกฝนทุกวันช่วยให้ทักษะการพูดของคุณเฉียบคม มาเริ่มฝึกกันเลย!</string>
+    <string name="notification_action_start">เริ่มฝึกฝน</string>
+</resources>

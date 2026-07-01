@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">Speak Fluently</string>
+    <string name="app_tagline">Cải thiện kỹ năng nói của bạn</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">Trang Chủ</string>
+    <string name="nav_practice">Luyện Tập</string>
+    <string name="nav_premium">Premium</string>
+    <string name="nav_settings">Cài Đặt</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Gói Âm Thanh</string>
+    <string name="home_subtitle">Chọn một gói để thực hành nói tiếng Anh</string>
+    <string name="start_practice">Bắt Đầu Luyện Tập</string>
+    <string name="download_required">Yêu Cầu Tải Xuống</string>
+    <string name="downloading">Đang tải xuống (%1$d%%)</string>
+    <string name="download_ready">Sẵn Sàng Phát</string>
+    <string name="premium_locked">Tính Năng Premium</string>
+    <string name="premium_locked_desc">Mở khóa gói này bằng cách kích hoạt Premium trong tab Premium.</string>
+
+    <!-- Player / Practice Screen -->
+    <string name="practice_session">Phiên Luyện Tập</string>
+    <string name="question_count">Câu hỏi: %1$d / %2$d</string>
+    <string name="pause_timer">Thời gian tạm dừng còn lại: %1$d giây</string>
+    <string name="listen_and_speak">Nghe và trả lời ngay bây giờ</string>
+    <string name="button_pause">Tạm dừng</string>
+    <string name="button_resume">Tiếp tục</string>
+    <string name="button_skip">Bỏ qua</string>
+    <string name="button_finish">Kết Thúc Phiên</string>
+    <string name="session_completed">Phiên Luyện Tập Hoàn Thành!</string>
+    <string name="session_completed_desc">Luyện tập rất tốt hôm nay. Kiên trì là chìa khóa để trôi chảy!</string>
+    <string name="back_to_home">Quay lại Trang Chủ</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Cài Đặt Luyện Tập</string>
+    <string name="language_section">Ngôn Ngữ Ứng Dụng</string>
+    <string name="questions_per_session_label">Số câu hỏi mỗi phiên</string>
+    <string name="pause_duration_label">Thời gian tạm dừng giữa các câu hỏi</string>
+    <string name="notification_settings">Nhắc Nhở Hàng Ngày</string>
+    <string name="enable_notifications">Bật Nhắc Nhở Luyện Tập</string>
+    <string name="reminder_time_label">Thời Gian Nhắc Nhở</string>
+    <string name="save_settings_btn">Lưu Cài Đặt</string>
+    <string name="settings_saved_success">Cập nhật cài đặt thành công!</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_title">Mở Khóa Speak Fluently Premium</string>
+    <string name="premium_subtitle">Mở khóa tất cả các gói IELTS, phỏng vấn xin việc và hội thoại nâng cao.</string>
+    <string name="premium_code_label">Nhập Mã Kích Hoạt Một Lần</string>
+    <string name="premium_code_placeholder">Ví dụ: SPEAK2026</string>
+    <string name="premium_activate_btn">Kích Hoạt Premium</string>
+    <string name="premium_success">Đã kích hoạt Premium! Cảm ơn sự hỗ trợ của bạn.</string>
+    <string name="premium_invalid_code">Mã kích hoạt không hợp lệ. Hãy thử SPEAK2026, FLUENT hoặc FREEPASS.</string>
+    <string name="premium_active_status">Trạng thái Premium: Đang hoạt động</string>
+    <string name="premium_future_features">Tính năng Premium sắp ra mắt (Beta):</string>
+    <string name="voice_recording">✓ Ghi âm &amp; Phát lại giọng nói thông minh</string>
+    <string name="custom_host">✓ Máy chủ máy chủ âm thanh tùy chỉnh</string>
+    <string name="ai_integration">✓ Đánh giá phát âm bằng AI</string>
+
+    <!-- Notifications -->
+    <string name="notification_title">Đến Giờ Luyện Nói Tiếng Anh!</string>
+    <string name="notification_body">Luyện tập hàng ngày giúp kỹ năng nói của bạn luôn nhạy bén. Luyện tập ngay thôi!</string>
+    <string name="notification_action_start">Bắt Đầu Luyện Tập</string>
+</resources>

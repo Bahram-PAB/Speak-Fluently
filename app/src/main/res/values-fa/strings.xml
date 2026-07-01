@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">اسپیک فلوئنتلی</string>
+    <string name="app_tagline">مهارت‌های مکالمه خود را تقویت کنید</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">خانه</string>
+    <string name="nav_practice">تمرین</string>
+    <string name="nav_premium">نسخه ویژه</string>
+    <string name="nav_settings">تنظیمات</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">بسته‌های صوتی</string>
+    <string name="home_subtitle">یک بسته را برای تمرین مکالمه انگلیسی انتخاب کنید</string>
+    <string name="start_practice">شروع تمرین</string>
+    <string name="download_required">نیاز به دانلود</string>
+    <string name="downloading">در حال دانلود (%1$d%%)</string>
+    <string name="download_ready">آماده پخش</string>
+    <string name="premium_locked">بسته ویژه</string>
+    <string name="premium_locked_desc">این بسته قفل است. با فعال‌سازی نسخه ویژه در بخش ویژه آن را باز کنید.</string>
+
+    <!-- Player / Practice Screen -->
+    <string name="practice_session">جلسه تمرین مکالمه</string>
+    <string name="question_count">سوال: %1$d از %2$d</string>
+    <string name="pause_timer">زمان پاسخگویی باقیمانده: %1$d ثانیه</string>
+    <string name="listen_and_speak">بشنوید و مکالمه کنید</string>
+    <string name="button_pause">توقف</string>
+    <string name="button_resume">ادامه</string>
+    <string name="button_skip">رد کردن</string>
+    <string name="button_finish">اتمام تمرین</string>
+    <string name="session_completed">تمرین با موفقیت انجام شد!</string>
+    <string name="session_completed_desc">کار بسیار عالی! تمرین مداوم و مستمر کلید روان صحبت کردن به زبان انگلیسی است.</string>
+    <string name="back_to_home">بازگشت به خانه</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">تنظیمات تمرین</string>
+    <string name="language_section">زبان برنامه</string>
+    <string name="questions_per_session_label">تعداد سوالات در هر جلسه</string>
+    <string name="pause_duration_label">زمان مکث بین سوالات (ثانیه)</string>
+    <string name="notification_settings">یادآوری‌های روزانه</string>
+    <string name="enable_notifications">فعال‌سازی یادآوری روزانه</string>
+    <string name="reminder_time_label">زمان یادآوری</string>
+    <string name="save_settings_btn">ذخیره تنظیمات</string>
+    <string name="settings_saved_success">تنظیمات با موفقیت ذخیره شد!</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_title">فعال‌سازی نسخه ویژه اسپیک فلوئنتلی</string>
+    <string name="premium_subtitle">دسترسی به بسته‌های صوتی آزمون آیلتس، مصاحبه‌های کاری و مکالمات پیشرفته.</string>
+    <string name="premium_code_label">کد فعال‌سازی یک‌بار مصرف را وارد کنید</string>
+    <string name="premium_code_placeholder">مثلاً: SPEAK2026</string>
+    <string name="premium_activate_btn">فعال‌سازی نسخه ویژه</string>
+    <string name="premium_success">نسخه ویژه با موفقیت فعال شد! از حمایت شما سپاسگزاریم.</string>
+    <string name="premium_invalid_code">کد فعال‌سازی نامعتبر است. از کدهایی مثل SPEAK2026 استفاده کنید.</string>
+    <string name="premium_active_status">وضعیت نسخه ویژه: فعال شده</string>
+    <string name="premium_future_features">ویژگی‌های نسخه ویژه آینده (بتا):</string>
+    <string name="voice_recording">✓ ضبط و پخش هوشمند صدا برای خودارزیابی</string>
+    <string name="custom_host">✓ اتصال به سرورهای میزبان صوتی دلخواه</string>
+    <string name="ai_integration">✓ ارزیابی و تصحیح تلفظ با هوش مصنوعی</string>
+
+    <!-- Notifications -->
+    <string name="notification_title">زمان تمرین مکالمه انگلیسی رسیده است!</string>
+    <string name="notification_body">تمرین روزانه مهارت صحبت کردن شما را روان‌تر می‌کند. تمرین را آغاز کنید!</string>
+    <string name="notification_action_start">شروع تمرین</string>
+</resources>

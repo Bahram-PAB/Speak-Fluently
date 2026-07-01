@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">Speak Fluently</string>
+    <string name="app_tagline">Tingkatkan keterampilan berbicara Anda</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_practice">Latihan</string>
+    <string name="nav_premium">Premium</string>
+    <string name="nav_settings">Pengaturan</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Paket Audio</string>
+    <string name="home_subtitle">Pilih paket untuk berlatih berbicara bahasa Inggris</string>
+    <string name="start_practice">Mulai Latihan</string>
+    <string name="download_required">Unduhan Diperlukan</string>
+    <string name="downloading">Mengunduh (%1$d%%)</string>
+    <string name="download_ready">Siap Diputar</string>
+    <string name="premium_locked">Fitur Premium</string>
+    <string name="premium_locked_desc">Buka kunci paket ini dengan mengaktifkan Premium di tab Premium.</string>
+
+    <!-- Player / Practice Screen -->
+    <string name="practice_session">Sesi Latihan</string>
+    <string name="question_count">Pertanyaan: %1$d dari %2$d</string>
+    <string name="pause_timer">Sisa waktu jeda: %1$d detik</string>
+    <string name="listen_and_speak">Dengarkan dan jawab sekarang</string>
+    <string name="button_pause">Jeda</string>
+    <string name="button_resume">Lanjutkan</string>
+    <string name="button_skip">Lewati</string>
+    <string name="button_finish">Selesaikan Sesi</string>
+    <string name="session_completed">Sesi Selesai!</string>
+    <string name="session_completed_desc">Kerja bagus berlatih hari ini. Konsistensi adalah kunci kefasihan!</string>
+    <string name="back_to_home">Kembali ke Beranda</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Pengaturan Latihan</string>
+    <string name="language_section">Bahasa Aplikasi</string>
+    <string name="questions_per_session_label">Pertanyaan per sesi</string>
+    <string name="pause_duration_label">Durasi jeda antar pertanyaan</string>
+    <string name="notification_settings">Pengingat Harian</string>
+    <string name="enable_notifications">Aktifkan Pengingat Latihan</string>
+    <string name="reminder_time_label">Waktu Pengingat</string>
+    <string name="save_settings_btn">Simpan Pengaturan</string>
+    <string name="settings_saved_success">Pengaturan berhasil diperbarui!</string>
+
+    <!-- Premium Screen -->
+    <string name="premium_title">Buka Speak Fluently Premium</string>
+    <string name="premium_subtitle">Buka semua paket IELTS, wawancara kerja, dan percakapan tingkat lanjut.</string>
+    <string name="premium_code_label">Masukkan Kode Aktivasi Satu Kali</string>
+    <string name="premium_code_placeholder">misal, SPEAK2026</string>
+    <string name="premium_activate_btn">Aktifkan Premium</string>
+    <string name="premium_success">Premium diaktifkan! Terima kasih atas dukungan Anda.</string>
+    <string name="premium_invalid_code">Kode aktivasi tidak valid. Coba SPEAK2026, FLUENT, atau FREEPASS.</string>
+    <string name="premium_active_status">Status Premium: Aktif</string>
+    <string name="premium_future_features">Fitur Premium Mendatang (Beta):</string>
+    <string name="voice_recording">✓ Rekam &amp; Putar Suara Pintar</string>
+    <string name="custom_host">✓ Server Host Audio Kustom</string>
+    <string name="ai_integration">✓ Penilaian Pengucapan AI</string>
+
+    <!-- Notifications -->
+    <string name="notification_title">Waktunya Latihan Bahasa Inggris!</string>
+    <string name="notification_body">Latihan harian menjaga keterampilan berbicara Anda tetap tajam. Mari berlatih sekarang!</string>
+    <string name="notification_action_start">Mulai Latihan</string>
+</resources>

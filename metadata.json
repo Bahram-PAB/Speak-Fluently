@@ -1,0 +1,6 @@
+{
+  "name": "Speak Fluently",
+  "description": "Improve your speaking skills with short audio questions, scheduled reminders, multi-language support, and smart offline fallback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
