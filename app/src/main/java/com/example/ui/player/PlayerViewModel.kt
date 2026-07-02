@@ -109,7 +109,12 @@ class PlayerViewModel(
 
         try {
             mediaPlayer = MediaPlayer().apply {
-                val mediaUri = Uri.parse(question.audioUrl)
+                val localPath = question.localPath
+                val mediaUri = if (localPath != null && File(localPath).exists()) {
+                    Uri.fromFile(File(localPath))
+                } else {
+                    Uri.parse(question.audioUrl)
+                }
                 setDataSource(appContext, mediaUri)
 
                 prepareAsync()
@@ -208,6 +213,14 @@ class PlayerViewModel(
     fun finishSession() {
         timerJob?.cancel()
         releasePlayer()
+        val currentPkgId = _uiState.value.currentPackage?.id
+        if (currentPkgId != null) {
+            viewModelScope.launch {
+                try {
+                    repository.markPackageCompleted(currentPkgId)
+                } catch (ignored: Exception) {}
+            }
+        }
         _uiState.update {
             it.copy(sessionState = SessionState.Completed)
         }

@@ -34,6 +34,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val settings by viewModel.settingsState.collectAsState()
+    val downloadState by viewModel.downloadState.collectAsState()
 
     // Temporary states during configuration before hitting Save
     var questionsCount by remember(settings) { mutableStateOf(settings.questionsPerSession) }
@@ -292,6 +293,20 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth().testTag("github_repo_input"),
                             singleLine = true
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                viewModel.checkAndDownloadAll(githubAudioRepo)
+                            },
+                            modifier = Modifier.fillMaxWidth().testTag("check_and_download_btn"),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Text(
+                                text = if (currentLanguageCode == "fa") "بررسی دسترسی و دریافت آفلاین فایل‌ها" else "Check Access & Download Files Offline",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -331,6 +346,130 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+    }
+
+    when (val state = downloadState) {
+        is DownloadProgressState.Idle -> { /* Do nothing */ }
+        is DownloadProgressState.CheckingAccess -> {
+            AlertDialog(
+                onDismissRequest = {},
+                confirmButton = {},
+                title = {
+                    Text(
+                        text = if (currentLanguageCode == "fa") "بررسی اتصال" else "Checking Connection",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(text = if (currentLanguageCode == "fa") "در حال بررسی دسترسی به مخزن..." else "Checking repository accessibility...")
+                    }
+                }
+            )
+        }
+        is DownloadProgressState.AccessSuccess -> {
+            AlertDialog(
+                onDismissRequest = {},
+                confirmButton = {},
+                title = {
+                    Text(
+                        text = if (currentLanguageCode == "fa") "اتصال موفق" else "Connected Successfully",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(text = state.message)
+                    }
+                }
+            )
+        }
+        is DownloadProgressState.Downloading -> {
+            AlertDialog(
+                onDismissRequest = {},
+                confirmButton = {},
+                title = {
+                    Text(
+                        text = if (currentLanguageCode == "fa") "دریافت فایل‌های تمرینی" else "Downloading Practice Files",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { state.progress / 100f },
+                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (currentLanguageCode == "fa") "در حال دریافت: ${state.progress}%" else "Downloading: ${state.progress}%",
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (currentLanguageCode == "fa") "فایل ${state.currentFileIndex} از ${state.totalFiles}" else "File ${state.currentFileIndex} of ${state.totalFiles}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
+        }
+        is DownloadProgressState.Finished -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.resetDownloadState() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.resetDownloadState() }) {
+                        Text(text = if (currentLanguageCode == "fa") "تایید" else "OK")
+                    }
+                },
+                title = {
+                    Text(
+                        text = if (currentLanguageCode == "fa") "عملیات موفقیت‌آمیز" else "Download Completed",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                text = {
+                    Text(text = if (currentLanguageCode == "fa") "تمامی فایل‌های صوتی با موفقیت دریافت و ذخیره شدند!" else "All practice audio files downloaded and saved offline successfully!")
+                }
+            )
+        }
+        is DownloadProgressState.Error -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.resetDownloadState() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.resetDownloadState() }) {
+                        Text(text = if (currentLanguageCode == "fa") "تایید" else "OK")
+                    }
+                },
+                title = {
+                    Text(
+                        text = if (currentLanguageCode == "fa") "خطا" else "Error",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                text = {
+                    Text(text = state.message)
+                }
+            )
         }
     }
 }

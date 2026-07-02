@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">اسپیک فلوئنتلی</string>
+    <string name="app_name">SpeakFluently</string>
     <string name="app_tagline">مهارت‌های مکالمه خود را تقویت کنید</string>
     
     <!-- Navigation -->
@@ -43,7 +43,7 @@
     <string name="settings_saved_success">تنظیمات با موفقیت ذخیره شد!</string>
 
     <!-- Premium Screen -->
-    <string name="premium_title">فعال‌سازی نسخه ویژه اسپیک فلوئنتلی</string>
+    <string name="premium_title">فعال‌سازی نسخه ویژه SpeakFluently</string>
     <string name="premium_subtitle">دسترسی به بسته‌های صوتی آزمون آیلتس، مصاحبه‌های کاری و مکالمات پیشرفته.</string>
     <string name="premium_code_label">کد فعال‌سازی یک‌بار مصرف را وارد کنید</string>
     <string name="premium_code_placeholder">مثلاً: SPEAK2026</string>

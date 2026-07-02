@@ -21,4 +21,7 @@ interface AudioPackageRepository {
     suspend fun saveSettings(settings: Settings)
     fun getPremiumStatus(): Flow<PremiumStatus>
     suspend fun activatePremium(code: String): Boolean
+    suspend fun checkGithubAccess(repo: String): Boolean
+    suspend fun markPackageCompleted(packageId: String)
+    suspend fun triggerCompletedPackagesCleanUp()
 }

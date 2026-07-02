@@ -16,3 +16,15 @@
 local.properties
 .env
 debug.keystore
+
+# Ignore audio assets to prevent deletion/overwriting when pushing from AI Studio
+/app/src/main/assets/audio/daily/*
+!/app/src/main/assets/audio/daily/.gitkeep
+/app/src/main/assets/audio/ielts/*
+!/app/src/main/assets/audio/ielts/.gitkeep
+/app/src/main/assets/audio/interview/*
+!/app/src/main/assets/audio/interview/.gitkeep
+
+# Ignore packages folder (if you store your audio packages at the root of the repository)
+/packages/
+
