@@ -55,9 +55,9 @@ class SettingsViewModel(
     fun checkAndDownloadAll(repo: String) {
         viewModelScope.launch {
             _downloadState.value = DownloadProgressState.CheckingAccess
-            val hasAccess = repository.checkGithubAccess(repo)
-            if (!hasAccess) {
-                _downloadState.value = DownloadProgressState.Error("عدم دسترسی به ریپازیتوری یا نامعتبر بودن مسیر. لطفاً از عمومی بودن مخزن و صحت نام کاربری/نام مخزن مطمئن شوید.")
+            val errorMsg = repository.checkGithubAccess(repo)
+            if (errorMsg != null) {
+                _downloadState.value = DownloadProgressState.Error(errorMsg)
                 return@launch
             }
 

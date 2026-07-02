@@ -118,47 +118,88 @@ class AudioPackageRepositoryImpl(
         return isValid
     }
 
-    override suspend fun checkGithubAccess(repo: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun checkGithubAccess(repo: String): String? = withContext(Dispatchers.IO) {
         val repoClean = extractGithubRepo(repo)
-        if (repoClean.isEmpty()) return@withContext false
-        
-        val branches = listOf("main", "master")
-        val prefixes = listOf("packages", "")
+        if (repoClean.isEmpty()) {
+            return@withContext "نام کاربری یا نام مخزن نامعتبر است. فرمت صحیح: username/repository"
+        }
         
         val client = okhttp3.OkHttpClient()
         
+        // 1. First, check if the repository exists on GitHub and is public
+        val repoUrl = "https://github.com/$repoClean"
+        val repoRequest = okhttp3.Request.Builder()
+            .url(repoUrl)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .build()
+            
+        try {
+            client.newCall(repoRequest).execute().use { response ->
+                if (response.code == 404) {
+                    return@withContext "مخزن '$repoClean' یافت نشد. لطفاً از صحت نام کاربری/مخزن مطمئن شوید و اطمینان حاصل کنید که مخزن شما عمومی (Public) است، نه خصوصی (Private)."
+                } else if (!response.isSuccessful) {
+                    return@withContext "خطا در برقراری ارتباط با گیت‌هاب (کد خطا: ${response.code})"
+                }
+            }
+        } catch (e: Exception) {
+            return@withContext "خطای شبکه در برقراری ارتباط با گیت‌هاب: ${e.localizedMessage}. لطفاً اتصال اینترنت خود را بررسی کنید."
+        }
+
+        // 2. The repo exists and is public! Now let's try to auto-detect branch and prefix
+        val branches = listOf("main", "master")
+        val prefixes = listOf("packages", "")
+        
         for (branch in branches) {
             for (prefix in prefixes) {
-                val testUrl = if (prefix.isNotEmpty()) {
-                    "https://raw.githubusercontent.com/$repoClean/$branch/$prefix/daily/speech-1.wav"
-                } else {
-                    "https://raw.githubusercontent.com/$repoClean/$branch/daily/speech-1.wav"
-                }
-                
-                val request = okhttp3.Request.Builder()
-                    .url(testUrl)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                    .build()
-                try {
-                    client.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val currentSettings = localSettings.settingsFlow.first()
-                            localSettings.saveSettings(
-                                currentSettings.copy(
-                                    githubAudioRepo = repoClean,
-                                    githubBranch = branch,
-                                    githubPathPrefix = prefix
-                                )
-                            )
-                            return@withContext true
-                        }
+                // We will test both conversational speech and IELTS speech file to find a match
+                val testFiles = listOf("daily/speech-1.wav", "ielts/q_ielts_hometown.wav")
+                for (testFile in testFiles) {
+                    val testUrl = if (prefix.isNotEmpty()) {
+                        "https://raw.githubusercontent.com/$repoClean/$branch/$prefix/$testFile"
+                    } else {
+                        "https://raw.githubusercontent.com/$repoClean/$branch/$testFile"
                     }
-                } catch (e: Exception) {
-                    // ignore and try next
+                    
+                    val request = okhttp3.Request.Builder()
+                        .url(testUrl)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                        .build()
+                    try {
+                        client.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                // Successfully matched! Save these configuration settings
+                                val currentSettings = localSettings.settingsFlow.first()
+                                localSettings.saveSettings(
+                                    currentSettings.copy(
+                                        githubAudioRepo = repoClean,
+                                        githubBranch = branch,
+                                        githubPathPrefix = prefix
+                                    )
+                                )
+                                return@withContext null // Success!
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // ignore and try next combination
+                    }
                 }
             }
         }
-        false
+        
+        // 3. If repo exists but we couldn't fetch specific files, do not block the user!
+        // Save the cleaned repository name with default main branch and packages prefix so they can try downloading anyway.
+        try {
+            val currentSettings = localSettings.settingsFlow.first()
+            localSettings.saveSettings(
+                currentSettings.copy(
+                    githubAudioRepo = repoClean,
+                    githubBranch = "main",
+                    githubPathPrefix = "packages"
+                )
+            )
+        } catch (ignored: Exception) {}
+        
+        null // We return null (success) because the repository is public and accessible!
     }
 
     override suspend fun markPackageCompleted(packageId: String) {
