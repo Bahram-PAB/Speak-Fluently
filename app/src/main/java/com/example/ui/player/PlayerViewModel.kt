@@ -60,30 +60,35 @@ class PlayerViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(sessionState = SessionState.Loading) }
             
-            val settings = repository.getSettings().first()
-            val audioPackage = repository.getPackageById(packageId).first()
-            
-            if (audioPackage == null) {
+            try {
+                val settings = repository.getSettings().first()
+                val audioPackage = repository.getPackageById(packageId).first()
+                
+                if (audioPackage == null) {
+                    _uiState.update { it.copy(sessionState = SessionState.Idle) }
+                    return@launch
+                }
+
+                // Shuffle and take questions based on settings count
+                val shuffledQuestions = audioPackage.files.shuffled()
+                    .take(settings.questionsPerSession)
+
+                _uiState.update {
+                    it.copy(
+                        currentPackage = audioPackage,
+                        questions = shuffledQuestions,
+                        settings = settings,
+                        sessionState = SessionState.PlayingAudio(0),
+                        isPaused = false
+                    )
+                }
+                
+                currentQuestionIndex = 0
+                playQuestion(0)
+            } catch (e: Exception) {
+                e.printStackTrace()
                 _uiState.update { it.copy(sessionState = SessionState.Idle) }
-                return@launch
             }
-
-            // Shuffle and take questions based on settings count
-            val shuffledQuestions = audioPackage.files.shuffled()
-                .take(settings.questionsPerSession)
-
-            _uiState.update {
-                it.copy(
-                    currentPackage = audioPackage,
-                    questions = shuffledQuestions,
-                    settings = settings,
-                    sessionState = SessionState.PlayingAudio(0),
-                    isPaused = false
-                )
-            }
-            
-            currentQuestionIndex = 0
-            playQuestion(0)
         }
     }
 

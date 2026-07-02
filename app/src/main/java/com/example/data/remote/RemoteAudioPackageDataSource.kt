@@ -144,31 +144,31 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                     AudioFile(
                         id = "q_weekend_plans",
                         text = "What are your plans for this upcoming weekend?",
-                        audioUrl = "$githubBaseUrl/daily/q_weekend_plans.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-1.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_favorite_hobby",
                         text = "Tell me about your favorite hobby and why you enjoy it.",
-                        audioUrl = "$githubBaseUrl/daily/q_favorite_hobby.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-2.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_perfect_day",
                         text = "Describe your perfect day from morning until night.",
-                        audioUrl = "$githubBaseUrl/daily/q_perfect_day.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-3.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_weather_mood",
                         text = "How does the weather affect your daily mood?",
-                        audioUrl = "$githubBaseUrl/daily/q_weather_mood.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-4.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_recommend_book",
                         text = "If you could recommend one book or movie, what would it be?",
-                        audioUrl = "$githubBaseUrl/daily/q_recommend_book.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-5.wav",
                         packageName = "pkg_conversational_english"
                     )
                 ),
@@ -182,31 +182,31 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                     AudioFile(
                         id = "q_ielts_hometown",
                         text = "Let's talk about your hometown. Where is it located, and what is it famous for?",
-                        audioUrl = "$githubBaseUrl/ielts/q_ielts_hometown.wav",
+                        audioUrl = "$githubBaseUrl/ielts/speech-1.wav",
                         packageName = "pkg_ielts_speaking"
                     ),
                     AudioFile(
                         id = "q_ielts_work_study",
                         text = "Do you work, or are you a student? What do you like most about it?",
-                        audioUrl = "$githubBaseUrl/ielts/q_ielts_work_study.wav",
+                        audioUrl = "$githubBaseUrl/ielts/speech-2.wav",
                         packageName = "pkg_ielts_speaking"
                     ),
                     AudioFile(
                         id = "q_ielts_technology",
                         text = "How often do you use technology in your studies or daily work?",
-                        audioUrl = "$githubBaseUrl/ielts/q_ielts_technology.wav",
+                        audioUrl = "$githubBaseUrl/ielts/speech-3.wav",
                         packageName = "pkg_ielts_speaking"
                     ),
                     AudioFile(
                         id = "q_ielts_public_transport",
                         text = "What is the public transport system like in your city?",
-                        audioUrl = "$githubBaseUrl/ielts/q_ielts_public_transport.wav",
+                        audioUrl = "$githubBaseUrl/ielts/speech-4.wav",
                         packageName = "pkg_ielts_speaking"
                     ),
                     AudioFile(
                         id = "q_ielts_future_plans",
                         text = "What are your career plans or academic goals for the next five years?",
-                        audioUrl = "$githubBaseUrl/ielts/q_ielts_future_plans.wav",
+                        audioUrl = "$githubBaseUrl/ielts/speech-5.wav",
                         packageName = "pkg_ielts_speaking"
                     )
                 ),
@@ -220,31 +220,31 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                     AudioFile(
                         id = "q_interview_introduce",
                         text = "Please introduce yourself and explain why you are interested in this position.",
-                        audioUrl = "$githubBaseUrl/interview/q_interview_introduce.wav",
+                        audioUrl = "$githubBaseUrl/interview/speech-1.wav",
                         packageName = "pkg_job_interview"
                     ),
                     AudioFile(
                         id = "q_interview_strength",
                         text = "What do you consider your greatest professional strength?",
-                        audioUrl = "$githubBaseUrl/interview/q_interview_strength.wav",
+                        audioUrl = "$githubBaseUrl/interview/speech-2.wav",
                         packageName = "pkg_job_interview"
                     ),
                     AudioFile(
                         id = "q_interview_conflict",
                         text = "Describe a situation where you had a conflict at work and how you resolved it.",
-                        audioUrl = "$githubBaseUrl/interview/q_interview_conflict.wav",
+                        audioUrl = "$githubBaseUrl/interview/speech-3.wav",
                         packageName = "pkg_job_interview"
                     ),
                     AudioFile(
                         id = "q_interview_pressure",
                         text = "How do you prioritize your tasks and manage tight deadlines under pressure?",
-                        audioUrl = "$githubBaseUrl/interview/q_interview_pressure.wav",
+                        audioUrl = "$githubBaseUrl/interview/speech-4.wav",
                         packageName = "pkg_job_interview"
                     ),
                     AudioFile(
                         id = "q_interview_failure",
                         text = "Tell me about a time you failed or made a mistake. What did you learn?",
-                        audioUrl = "$githubBaseUrl/interview/q_interview_failure.wav",
+                        audioUrl = "$githubBaseUrl/interview/speech-5.wav",
                         packageName = "pkg_job_interview"
                     )
                 ),

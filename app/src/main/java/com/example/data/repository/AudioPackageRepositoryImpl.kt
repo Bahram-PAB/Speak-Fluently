@@ -30,6 +30,8 @@ class AudioPackageRepositoryImpl(
         if (!exists()) mkdirs()
     }
 
+    private var cachedPackages: List<AudioPackage>? = null
+
     private fun copyAssetToLocalIfPresent(fileName: String, targetFile: File) {
         if (targetFile.exists() && targetFile.length() > 0L) return
         
@@ -56,59 +58,71 @@ class AudioPackageRepositoryImpl(
     }
 
     override fun getPackages(): Flow<List<AudioPackage>> = flow {
-        // Trigger automated clean up of packages older than 1 week
+        // Emit cached packages immediately to prevent UI blocking or loading screen hangs
+        cachedPackages?.let { emit(it) }
+
         try {
-            cleanUpCompletedPackages()
-        } catch (ignored: Exception) {}
+            // Trigger automated clean up of packages older than 1 week
+            try {
+                cleanUpCompletedPackages()
+            } catch (ignored: Exception) {}
 
-        val currentSettings = localSettings.settingsFlow.first()
-        val repo = extractGithubRepo(currentSettings.githubAudioRepo)
-        val branch = currentSettings.githubBranch
-        val pathPrefix = currentSettings.githubPathPrefix
+            val currentSettings = localSettings.settingsFlow.first()
+            val repo = extractGithubRepo(currentSettings.githubAudioRepo)
+            val branch = currentSettings.githubBranch
+            val pathPrefix = currentSettings.githubPathPrefix
 
-        val baseUrl = if (pathPrefix.isNotEmpty()) {
-            "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
-        } else {
-            "https://raw.githubusercontent.com/$repo/$branch"
-        }
-
-        val remoteMetadata = remotePackages.getRemotePackagesMetadata(repo, branch, pathPrefix)
-        
-        val mappedList = remoteMetadata.map { pkg ->
-            val updatedFiles = pkg.files.map { file ->
-                val relativePath = if (file.audioUrl.contains("main/packages/")) {
-                    file.audioUrl.substringAfter("main/packages/")
-                } else {
-                    file.audioUrl.substringAfterLast("/")
-                }
-                
-                val updatedUrl = if (file.audioUrl.contains("main/packages/")) {
-                    "$baseUrl/$relativePath"
-                } else {
-                    file.audioUrl
-                }
-                
-                val ext = relativePath.substringAfterLast(".", "wav")
-                val localFile = File(downloadsDir, "${file.id}.$ext")
-                
-                // Proactively copy from assets if available offline in APK
-                try {
-                    copyAssetToLocalIfPresent(file.id, localFile)
-                } catch (ignored: Exception) {}
-                
-                val resolvedLocalPath = if (localFile.exists() && localFile.length() > 0L) {
-                    localFile.absolutePath
-                } else {
-                    null
-                }
-                file.copy(
-                    audioUrl = updatedUrl,
-                    localPath = resolvedLocalPath
-                )
+            val baseUrl = if (pathPrefix.isNotEmpty()) {
+                "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
+            } else {
+                "https://raw.githubusercontent.com/$repo/$branch"
             }
-            pkg.copy(files = updatedFiles)
+
+            val remoteMetadata = remotePackages.getRemotePackagesMetadata(repo, branch, pathPrefix)
+            
+            val mappedList = remoteMetadata.map { pkg ->
+                val updatedFiles = pkg.files.map { file ->
+                    val relativePath = if (file.audioUrl.contains("main/packages/")) {
+                        file.audioUrl.substringAfter("main/packages/")
+                    } else {
+                        file.audioUrl.substringAfterLast("/")
+                    }
+                    
+                    val updatedUrl = if (file.audioUrl.contains("main/packages/")) {
+                        "$baseUrl/$relativePath"
+                    } else {
+                        file.audioUrl
+                    }
+                    
+                    val ext = relativePath.substringAfterLast(".", "wav")
+                    val localFile = File(downloadsDir, "${file.id}.$ext")
+                    
+                    // Proactively copy from assets if available offline in APK
+                    try {
+                        copyAssetToLocalIfPresent(file.id, localFile)
+                    } catch (ignored: Exception) {}
+                    
+                    val resolvedLocalPath = if (localFile.exists() && localFile.length() > 0L) {
+                        localFile.absolutePath
+                    } else {
+                        null
+                    }
+                    file.copy(
+                        audioUrl = updatedUrl,
+                        localPath = resolvedLocalPath
+                    )
+                }
+                pkg.copy(files = updatedFiles)
+            }
+            
+            cachedPackages = mappedList
+            emit(mappedList)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback to previous cache or hardcoded list so flow never fails abruptly
+            val fallback = cachedPackages ?: remotePackages.getHardcodedPackages()
+            emit(fallback)
         }
-        emit(mappedList)
     }.flowOn(Dispatchers.IO)
 
     override fun getPackageById(id: String): Flow<AudioPackage?> = getPackages().map { list ->
@@ -205,7 +219,7 @@ class AudioPackageRepositoryImpl(
         for (branch in branches) {
             for (prefix in prefixes) {
                 // We will test both conversational speech and IELTS speech file to find a match
-                val testFiles = listOf("daily/speech-1.wav", "ielts/q_ielts_hometown.wav")
+                val testFiles = listOf("daily/speech-1.wav", "ielts/speech-1.wav")
                 for (testFile in testFiles) {
                     val testUrl = if (prefix.isNotEmpty()) {
                         "https://raw.githubusercontent.com/$repoClean/$branch/$prefix/$testFile"
