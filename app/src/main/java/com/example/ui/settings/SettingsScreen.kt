@@ -40,6 +40,7 @@ fun SettingsScreen(
     var pauseSeconds by remember(settings) { mutableStateOf(settings.pauseDurationSeconds) }
     var notificationsEnabled by remember(settings) { mutableStateOf(settings.notificationsEnabled) }
     var notificationTime by remember(settings) { mutableStateOf(settings.dailyNotificationTime) }
+    var githubAudioRepo by remember(settings) { mutableStateOf(settings.githubAudioRepo) }
     
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -263,6 +264,38 @@ fun SettingsScreen(
                 }
             }
 
+            // 3.5 GitHub Audio Repository Config
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "GitHub Audio Source",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Format: username/repository",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = githubAudioRepo,
+                            onValueChange = { githubAudioRepo = it },
+                            label = { Text("GitHub Repo Path") },
+                            modifier = Modifier.fillMaxWidth().testTag("github_repo_input"),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+
             // 4. Save Button
             item {
                 Button(
@@ -272,7 +305,8 @@ fun SettingsScreen(
                             notificationsEnabled = notificationsEnabled,
                             appLanguage = currentLanguageCode,
                             questionsPerSession = questionsCount,
-                            pauseDurationSeconds = pauseSeconds
+                            pauseDurationSeconds = pauseSeconds,
+                            githubAudioRepo = githubAudioRepo
                         )
                         viewModel.saveSettings(newSettings)
                         

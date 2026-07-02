@@ -27,31 +27,31 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                     AudioFile(
                         id = "q_weekend_plans",
                         text = "What are your plans for this upcoming weekend?",
-                        audioUrl = "$githubBaseUrl/daily/q_weekend_plans.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-1.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_favorite_hobby",
                         text = "Tell me about your favorite hobby and why you enjoy it.",
-                        audioUrl = "$githubBaseUrl/daily/q_favorite_hobby.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-2.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_perfect_day",
                         text = "Describe your perfect day from morning until night.",
-                        audioUrl = "$githubBaseUrl/daily/q_perfect_day.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-3.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_weather_mood",
                         text = "How does the weather affect your daily mood?",
-                        audioUrl = "$githubBaseUrl/daily/q_weather_mood.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-4.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_recommend_book",
                         text = "If you could recommend one book or movie, what would it be?",
-                        audioUrl = "$githubBaseUrl/daily/q_recommend_book.wav",
+                        audioUrl = "$githubBaseUrl/daily/speech-5.wav",
                         packageName = "pkg_conversational_english"
                     )
                 ),

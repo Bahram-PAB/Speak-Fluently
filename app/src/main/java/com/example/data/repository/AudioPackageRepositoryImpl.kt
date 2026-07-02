@@ -11,6 +11,7 @@ import com.example.domain.model.PremiumStatus
 import com.example.domain.model.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -27,36 +28,21 @@ class AudioPackageRepositoryImpl(
     }
 
     override fun getPackages(): Flow<List<AudioPackage>> = flow {
+        val currentSettings = localSettings.settingsFlow.first()
+        val repo = currentSettings.githubAudioRepo
+        val baseUrl = "https://raw.githubusercontent.com/$repo/main/packages"
+
         val remoteMetadata = remotePackages.getRemotePackagesMetadata()
-        // Map files to check if they exist locally
+        
+        // Map files to dynamic online url and set localPath = null for 100% online streaming
         val mappedList = remoteMetadata.map { pkg ->
             val updatedFiles = pkg.files.map { file ->
-                val relativePath = file.audioUrl.substringAfter("main/packages/") // e.g., "daily/q_weekend_plans.wav"
-                val baseRelativePath = relativePath.substringBeforeLast(".") // e.g., "daily/q_weekend_plans"
-                
-                var foundAssetPath: String? = null
-                for (ext in listOf("wav", "mp3")) {
-                    val assetPath = "audio/$baseRelativePath.$ext"
-                    try {
-                        context.assets.open(assetPath).use {
-                            foundAssetPath = assetPath
-                        }
-                        break
-                    } catch (e: Exception) {
-                        // Not found
-                    }
-                }
-
-                if (foundAssetPath != null) {
-                    file.copy(localPath = "asset:///$foundAssetPath")
-                } else {
-                    val localFile = File(downloadsDir, "${file.id}.wav")
-                    if (localFile.exists() && localFile.length() > 0L) {
-                        file.copy(localPath = localFile.absolutePath)
-                    } else {
-                        file
-                    }
-                }
+                val relativePath = file.audioUrl.substringAfter("main/packages/") // e.g., "daily/speech-1.wav"
+                val updatedUrl = "$baseUrl/$relativePath"
+                file.copy(
+                    audioUrl = updatedUrl,
+                    localPath = null // Ensure online streaming/downloading directly from URL!
+                )
             }
             pkg.copy(files = updatedFiles)
         }

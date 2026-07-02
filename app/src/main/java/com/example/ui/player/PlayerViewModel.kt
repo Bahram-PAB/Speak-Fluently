@@ -106,30 +106,11 @@ class PlayerViewModel(
         }
 
         val question = state.questions[index]
-        
-        // Smart Fallback URI resolution
-        val localPath = question.localPath
 
         try {
             mediaPlayer = MediaPlayer().apply {
-                if (localPath != null && localPath.startsWith("asset:///")) {
-                    val assetPath = localPath.substringAfter("asset:///")
-                    val descriptor = appContext.assets.openFd(assetPath)
-                    setDataSource(descriptor.fileDescriptor, descriptor.startOffset, descriptor.length)
-                    descriptor.close()
-                } else {
-                    val mediaUri = if (localPath != null) {
-                        val localFile = File(localPath)
-                        if (localFile.exists() && localFile.length() > 0L) {
-                            Uri.fromFile(localFile)
-                        } else {
-                            Uri.parse(question.audioUrl)
-                        }
-                    } else {
-                        Uri.parse(question.audioUrl)
-                    }
-                    setDataSource(appContext, mediaUri)
-                }
+                val mediaUri = Uri.parse(question.audioUrl)
+                setDataSource(appContext, mediaUri)
 
                 prepareAsync()
                 setOnPreparedListener { mp ->
