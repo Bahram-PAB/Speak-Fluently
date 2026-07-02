@@ -31,11 +31,31 @@ class AudioPackageRepositoryImpl(
         // Map files to check if they exist locally
         val mappedList = remoteMetadata.map { pkg ->
             val updatedFiles = pkg.files.map { file ->
-                val localFile = File(downloadsDir, "${file.id}.wav")
-                if (localFile.exists() && localFile.length() > 0L) {
-                    file.copy(localPath = localFile.absolutePath)
+                val relativePath = file.audioUrl.substringAfter("main/packages/") // e.g., "daily/q_weekend_plans.wav"
+                val baseRelativePath = relativePath.substringBeforeLast(".") // e.g., "daily/q_weekend_plans"
+                
+                var foundAssetPath: String? = null
+                for (ext in listOf("wav", "mp3")) {
+                    val assetPath = "audio/$baseRelativePath.$ext"
+                    try {
+                        context.assets.open(assetPath).use {
+                            foundAssetPath = assetPath
+                        }
+                        break
+                    } catch (e: Exception) {
+                        // Not found
+                    }
+                }
+
+                if (foundAssetPath != null) {
+                    file.copy(localPath = "asset:///$foundAssetPath")
                 } else {
-                    file
+                    val localFile = File(downloadsDir, "${file.id}.wav")
+                    if (localFile.exists() && localFile.length() > 0L) {
+                        file.copy(localPath = localFile.absolutePath)
+                    } else {
+                        file
+                    }
                 }
             }
             pkg.copy(files = updatedFiles)
