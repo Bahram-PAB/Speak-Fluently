@@ -6,6 +6,8 @@ data class Settings(
     val appLanguage: String = "fa", // Default language is Persian (Farsi)
     val questionsPerSession: Int = 5,
     val pauseDurationSeconds: Int = 20,
-    val githubAudioRepo: String = "username/speakfluently-audio"
+    val githubAudioRepo: String = "username/speakfluently-audio",
+    val githubBranch: String = "main",
+    val githubPathPrefix: String = "packages"
 )
 

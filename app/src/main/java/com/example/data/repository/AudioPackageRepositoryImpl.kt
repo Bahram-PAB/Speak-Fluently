@@ -37,8 +37,15 @@ class AudioPackageRepositoryImpl(
         } catch (ignored: Exception) {}
 
         val currentSettings = localSettings.settingsFlow.first()
-        val repo = currentSettings.githubAudioRepo
-        val baseUrl = "https://raw.githubusercontent.com/$repo/main/packages"
+        val repo = extractGithubRepo(currentSettings.githubAudioRepo)
+        val branch = currentSettings.githubBranch
+        val pathPrefix = currentSettings.githubPathPrefix
+
+        val baseUrl = if (pathPrefix.isNotEmpty()) {
+            "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
+        } else {
+            "https://raw.githubusercontent.com/$repo/$branch"
+        }
 
         val remoteMetadata = remotePackages.getRemotePackagesMetadata()
         
@@ -112,16 +119,46 @@ class AudioPackageRepositoryImpl(
     }
 
     override suspend fun checkGithubAccess(repo: String): Boolean = withContext(Dispatchers.IO) {
-        val testUrl = "https://raw.githubusercontent.com/$repo/main/packages/daily/speech-1.wav"
+        val repoClean = extractGithubRepo(repo)
+        if (repoClean.isEmpty()) return@withContext false
+        
+        val branches = listOf("main", "master")
+        val prefixes = listOf("packages", "")
+        
         val client = okhttp3.OkHttpClient()
-        val request = okhttp3.Request.Builder().url(testUrl).head().build()
-        try {
-            client.newCall(request).execute().use { response ->
-                response.isSuccessful
+        
+        for (branch in branches) {
+            for (prefix in prefixes) {
+                val testUrl = if (prefix.isNotEmpty()) {
+                    "https://raw.githubusercontent.com/$repoClean/$branch/$prefix/daily/speech-1.wav"
+                } else {
+                    "https://raw.githubusercontent.com/$repoClean/$branch/daily/speech-1.wav"
+                }
+                
+                val request = okhttp3.Request.Builder()
+                    .url(testUrl)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    .build()
+                try {
+                    client.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val currentSettings = localSettings.settingsFlow.first()
+                            localSettings.saveSettings(
+                                currentSettings.copy(
+                                    githubAudioRepo = repoClean,
+                                    githubBranch = branch,
+                                    githubPathPrefix = prefix
+                                )
+                            )
+                            return@withContext true
+                        }
+                    }
+                } catch (e: Exception) {
+                    // ignore and try next
+                }
             }
-        } catch (e: Exception) {
-            false
         }
+        false
     }
 
     override suspend fun markPackageCompleted(packageId: String) {
@@ -137,8 +174,15 @@ class AudioPackageRepositoryImpl(
 
     private suspend fun cleanUpCompletedPackages() {
         val currentSettings = localSettings.settingsFlow.first()
-        val repo = currentSettings.githubAudioRepo
-        val baseUrl = "https://raw.githubusercontent.com/$repo/main/packages"
+        val repo = extractGithubRepo(currentSettings.githubAudioRepo)
+        val branch = currentSettings.githubBranch
+        val pathPrefix = currentSettings.githubPathPrefix
+
+        val baseUrl = if (pathPrefix.isNotEmpty()) {
+            "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
+        } else {
+            "https://raw.githubusercontent.com/$repo/$branch"
+        }
 
         val remoteMetadata = remotePackages.getRemotePackagesMetadata()
         for (pkg in remoteMetadata) {
@@ -160,6 +204,29 @@ class AudioPackageRepositoryImpl(
                     }
                 }
             }
+        }
+    }
+
+    private fun extractGithubRepo(input: String): String {
+        val clean = input.trim()
+        if (clean.isEmpty()) return ""
+        
+        var path = clean
+        if (path.startsWith("https://")) {
+            path = path.substringAfter("https://")
+        } else if (path.startsWith("http://")) {
+            path = path.substringAfter("http://")
+        }
+        
+        if (path.startsWith("github.com/")) {
+            path = path.substringAfter("github.com/")
+        }
+        
+        val parts = path.split("/").filter { it.isNotEmpty() }
+        return if (parts.size >= 2) {
+            "${parts[0]}/${parts[1]}"
+        } else {
+            clean
         }
     }
 }

@@ -24,6 +24,8 @@ class LocalSettingsDataSource(private val context: Context) {
         private val KEY_QUESTIONS_PER_SESSION = intPreferencesKey("questions_per_session")
         private val KEY_PAUSE_DURATION = intPreferencesKey("pause_duration")
         private val KEY_GITHUB_AUDIO_REPO = stringPreferencesKey("github_audio_repo")
+        private val KEY_GITHUB_BRANCH = stringPreferencesKey("github_branch")
+        private val KEY_GITHUB_PATH_PREFIX = stringPreferencesKey("github_path_prefix")
         
         private val KEY_IS_PREMIUM = booleanPreferencesKey("is_premium")
         private val KEY_ACTIVATION_CODE = stringPreferencesKey("activation_code")
@@ -36,7 +38,9 @@ class LocalSettingsDataSource(private val context: Context) {
             appLanguage = preferences[KEY_APP_LANGUAGE] ?: "fa", // Persian is default
             questionsPerSession = preferences[KEY_QUESTIONS_PER_SESSION] ?: 5,
             pauseDurationSeconds = preferences[KEY_PAUSE_DURATION] ?: 20,
-            githubAudioRepo = preferences[KEY_GITHUB_AUDIO_REPO] ?: "username/speakfluently-audio"
+            githubAudioRepo = preferences[KEY_GITHUB_AUDIO_REPO] ?: "username/speakfluently-audio",
+            githubBranch = preferences[KEY_GITHUB_BRANCH] ?: "main",
+            githubPathPrefix = preferences[KEY_GITHUB_PATH_PREFIX] ?: "packages"
         )
     }
 
@@ -48,6 +52,8 @@ class LocalSettingsDataSource(private val context: Context) {
             preferences[KEY_QUESTIONS_PER_SESSION] = settings.questionsPerSession
             preferences[KEY_PAUSE_DURATION] = settings.pauseDurationSeconds
             preferences[KEY_GITHUB_AUDIO_REPO] = settings.githubAudioRepo
+            preferences[KEY_GITHUB_BRANCH] = settings.githubBranch
+            preferences[KEY_GITHUB_PATH_PREFIX] = settings.githubPathPrefix
         }
     }
 
