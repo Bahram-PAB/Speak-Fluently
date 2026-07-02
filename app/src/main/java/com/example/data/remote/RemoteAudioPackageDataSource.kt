@@ -99,28 +99,64 @@ class RemoteAudioPackageDataSource(private val context: Context) {
         val filesArray = obj.optJSONArray("files")
         if (filesArray != null) {
             for (j in 0 until filesArray.length()) {
-                val fileObj = filesArray.getJSONObject(j)
-                val fileId = fileObj.optString("id", java.util.UUID.randomUUID().toString())
-                val text = fileObj.optString("text", "Practice Question")
-                var audioUrl = fileObj.optString("audioUrl", "")
-                
-                // If the audioUrl is relative (does not start with http/https), prepend the baseUrl
-                if (audioUrl.isNotEmpty() && !audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
-                    audioUrl = if (baseUrl.endsWith("/") || audioUrl.startsWith("/")) {
-                        "$baseUrl$audioUrl"
-                    } else {
-                        "$baseUrl/$audioUrl"
+                try {
+                    val fileObj = filesArray.getJSONObject(j)
+                    val fileId = fileObj.optString("id", java.util.UUID.randomUUID().toString())
+                    val text = fileObj.optString("text", "Practice Question")
+                    var audioUrl = fileObj.optString("audioUrl", "")
+                    
+                    // If the audioUrl is relative (does not start with http/https), prepend the baseUrl
+                    if (audioUrl.isNotEmpty() && !audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
+                        audioUrl = if (baseUrl.endsWith("/") || audioUrl.startsWith("/")) {
+                            "$baseUrl$audioUrl"
+                        } else {
+                            "$baseUrl/$audioUrl"
+                        }
                     }
-                }
-                
-                filesList.add(
-                    AudioFile(
-                        id = fileId,
-                        text = text,
-                        audioUrl = audioUrl,
-                        packageName = id
+                    
+                    filesList.add(
+                        AudioFile(
+                            id = fileId,
+                            text = text,
+                            audioUrl = audioUrl,
+                            packageName = id
+                        )
                     )
+                } catch (ignored: Exception) {
+                    // Prevent single file parse error from breaking the entire package list
+                }
+            }
+        }
+
+        // Extremely robust fallback: if files list is empty, generate standard files or fallback to hardcoded ones
+        if (filesList.isEmpty()) {
+            val defaultPkg = getHardcodedPackages().find { it.id == id }
+            if (defaultPkg != null) {
+                filesList.addAll(defaultPkg.files)
+            } else {
+                val folderName = when (id) {
+                    "pkg_conversational_english" -> "daily"
+                    "pkg_ielts_speaking" -> "ielts"
+                    "pkg_job_interview" -> "interview"
+                    else -> id.replace("pkg_", "")
+                }
+                val titles = listOf(
+                    "First question practice",
+                    "Second question practice",
+                    "Third question practice",
+                    "Fourth question practice",
+                    "Fifth question practice"
                 )
+                for (i in 1..5) {
+                    filesList.add(
+                        AudioFile(
+                            id = "q_${id}_$i",
+                            text = titles[i - 1],
+                            audioUrl = if (baseUrl.endsWith("/")) "$baseUrl$folderName/speech-$i.wav" else "$baseUrl/$folderName/speech-$i.wav",
+                            packageName = id
+                        )
+                    )
+                }
             }
         }
         

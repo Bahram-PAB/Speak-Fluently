@@ -269,6 +269,25 @@ class AudioPackageRepositoryImpl(
         null // We return null (success) because the repository is public and accessible!
     }
 
+    override suspend fun checkFileExistsOnGithub(url: String): Boolean = withContext(Dispatchers.IO) {
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .head()
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .build()
+        try {
+            client.newCall(request).execute().use { response ->
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     override suspend fun markPackageCompleted(packageId: String) {
         val key = androidx.datastore.preferences.core.longPreferencesKey("completed_time_$packageId")
         context.dataStore.edit { preferences ->

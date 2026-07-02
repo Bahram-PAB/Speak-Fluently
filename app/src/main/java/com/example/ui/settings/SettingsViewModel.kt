@@ -61,13 +61,29 @@ class SettingsViewModel(
                 return@launch
             }
 
-            _downloadState.value = DownloadProgressState.AccessSuccess("اتصال موفقیت‌آمیز بود. در حال آماده‌سازی دریافت...")
-            kotlinx.coroutines.delay(1200)
+            _downloadState.value = DownloadProgressState.AccessSuccess("اتصال موفقیت‌آمیز بود. در حال بررسی فایل‌های موجود...")
+            kotlinx.coroutines.delay(800)
 
             try {
                 val packages = repository.getPackages().first()
                 val allFiles = packages.flatMap { it.files }
-                val totalCount = allFiles.size
+                
+                // Smart scan: Check in parallel which files actually exist on GitHub
+                val existingFiles = java.util.Collections.synchronizedList(mutableListOf<com.example.domain.model.AudioFile>())
+                kotlinx.coroutines.coroutineScope {
+                    allFiles.map { file ->
+                        launch(kotlinx.coroutines.Dispatchers.IO) {
+                            val exists = repository.checkFileExistsOnGithub(file.audioUrl)
+                            if (exists) {
+                                existingFiles.add(file)
+                            }
+                        }
+                    }
+                }
+                
+                // Fallback to all files if scan failed to find anything (e.g. rate limit / network glitch)
+                val filesToDownload = if (existingFiles.isNotEmpty()) existingFiles else allFiles
+                val totalCount = filesToDownload.size
                 
                 if (totalCount == 0) {
                     _downloadState.value = DownloadProgressState.Finished
@@ -77,7 +93,7 @@ class SettingsViewModel(
                 _downloadState.value = DownloadProgressState.Downloading(0, 0, totalCount)
 
                 var completedCount = 0
-                for (file in allFiles) {
+                for (file in filesToDownload) {
                     repository.downloadFile(file, force = true).collect { status ->
                         when (status) {
                             is com.example.domain.repository.DownloadStatus.Success -> {
