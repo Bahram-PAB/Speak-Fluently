@@ -16,7 +16,124 @@ class RemoteAudioPackageDataSource(private val context: Context) {
     // Default configuration for GitHub raw URL hosted speech files
     private val githubBaseUrl = "https://raw.githubusercontent.com/username/speakfluently-audio/main/packages"
 
-    fun getRemotePackagesMetadata(): List<AudioPackage> {
+    fun getRemotePackagesMetadata(repo: String = "", branch: String = "", pathPrefix: String = ""): List<AudioPackage> {
+        val defaultList = getHardcodedPackages()
+        if (repo.isEmpty() || branch.isEmpty()) {
+            return defaultList
+        }
+
+        val baseUrl = if (pathPrefix.isNotEmpty()) {
+            "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
+        } else {
+            "https://raw.githubusercontent.com/$repo/$branch"
+        }
+
+        // Try to fetch custom packages.json or metadata.json from GitHub
+        val jsonUrls = listOf(
+            "$baseUrl/packages.json",
+            "https://raw.githubusercontent.com/$repo/$branch/packages.json",
+            "$baseUrl/metadata.json",
+            "https://raw.githubusercontent.com/$repo/$branch/metadata.json"
+        )
+
+        for (url in jsonUrls) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val bodyString = response.body?.string() ?: ""
+                        if (bodyString.isNotEmpty()) {
+                            val parsed = parseJsonPackages(bodyString, baseUrl)
+                            if (parsed.isNotEmpty()) {
+                                return parsed
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Try next URL
+            }
+        }
+
+        // If no remote JSON metadata is found, use the hardcoded ones
+        return defaultList
+    }
+
+    private fun parseJsonPackages(jsonStr: String, baseUrl: String): List<AudioPackage> {
+        val list = mutableListOf<AudioPackage>()
+        try {
+            val trimmed = jsonStr.trim()
+            if (trimmed.startsWith("[")) {
+                val array = org.json.JSONArray(trimmed)
+                for (i in 0 until array.length()) {
+                    val pkgObj = array.getJSONObject(i)
+                    list.add(parseSinglePackage(pkgObj, baseUrl))
+                }
+            } else if (trimmed.startsWith("{")) {
+                val obj = org.json.JSONObject(trimmed)
+                if (obj.has("packages")) {
+                    val array = obj.getJSONArray("packages")
+                    for (i in 0 until array.length()) {
+                        list.add(parseSinglePackage(array.getJSONObject(i), baseUrl))
+                    }
+                } else {
+                    list.add(parseSinglePackage(obj, baseUrl))
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    private fun parseSinglePackage(obj: org.json.JSONObject, baseUrl: String): AudioPackage {
+        val id = obj.optString("id", java.util.UUID.randomUUID().toString())
+        val name = obj.optString("name", "Custom Package")
+        val description = obj.optString("description", "")
+        val isPremiumOnly = obj.optBoolean("isPremiumOnly", false)
+        
+        val filesList = mutableListOf<AudioFile>()
+        val filesArray = obj.optJSONArray("files")
+        if (filesArray != null) {
+            for (j in 0 until filesArray.length()) {
+                val fileObj = filesArray.getJSONObject(j)
+                val fileId = fileObj.optString("id", java.util.UUID.randomUUID().toString())
+                val text = fileObj.optString("text", "Practice Question")
+                var audioUrl = fileObj.optString("audioUrl", "")
+                
+                // If the audioUrl is relative (does not start with http/https), prepend the baseUrl
+                if (audioUrl.isNotEmpty() && !audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
+                    audioUrl = if (baseUrl.endsWith("/") || audioUrl.startsWith("/")) {
+                        "$baseUrl$audioUrl"
+                    } else {
+                        "$baseUrl/$audioUrl"
+                    }
+                }
+                
+                filesList.add(
+                    AudioFile(
+                        id = fileId,
+                        text = text,
+                        audioUrl = audioUrl,
+                        packageName = id
+                    )
+                )
+            }
+        }
+        
+        return AudioPackage(
+            id = id,
+            name = name,
+            description = description,
+            files = filesList,
+            isPremiumOnly = isPremiumOnly
+        )
+    }
+
+    fun getHardcodedPackages(): List<AudioPackage> {
         // High quality educational Packages
         return listOf(
             AudioPackage(
@@ -27,31 +144,31 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                     AudioFile(
                         id = "q_weekend_plans",
                         text = "What are your plans for this upcoming weekend?",
-                        audioUrl = "$githubBaseUrl/daily/speech-1.wav",
+                        audioUrl = "$githubBaseUrl/daily/q_weekend_plans.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_favorite_hobby",
                         text = "Tell me about your favorite hobby and why you enjoy it.",
-                        audioUrl = "$githubBaseUrl/daily/speech-2.wav",
+                        audioUrl = "$githubBaseUrl/daily/q_favorite_hobby.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_perfect_day",
                         text = "Describe your perfect day from morning until night.",
-                        audioUrl = "$githubBaseUrl/daily/speech-3.wav",
+                        audioUrl = "$githubBaseUrl/daily/q_perfect_day.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_weather_mood",
                         text = "How does the weather affect your daily mood?",
-                        audioUrl = "$githubBaseUrl/daily/speech-4.wav",
+                        audioUrl = "$githubBaseUrl/daily/q_weather_mood.wav",
                         packageName = "pkg_conversational_english"
                     ),
                     AudioFile(
                         id = "q_recommend_book",
                         text = "If you could recommend one book or movie, what would it be?",
-                        audioUrl = "$githubBaseUrl/daily/speech-5.wav",
+                        audioUrl = "$githubBaseUrl/daily/q_recommend_book.wav",
                         packageName = "pkg_conversational_english"
                     )
                 ),
@@ -138,11 +255,11 @@ class RemoteAudioPackageDataSource(private val context: Context) {
 
     /**
      * Downloads file from url and saves to local storage.
-     * If download fails, synthesizes or creates a dummy WAV file containing the spoken text
+     * If download fails and throwOnError is false, synthesizes or creates a dummy WAV file containing the spoken text
      * so that the application has a perfect fallback.
      */
     @Throws(IOException::class)
-    fun downloadUrlToFile(url: String, targetFile: File, backupText: String): File {
+    fun downloadUrlToFile(url: String, targetFile: File, backupText: String, throwOnError: Boolean = false): File {
         val request = Request.Builder().url(url).build()
         try {
             client.newCall(request).execute().use { response ->
@@ -157,6 +274,15 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
+            if (throwOnError) {
+                // Delete target file if it was created partially, so it can be retried cleanly next time
+                try {
+                    if (targetFile.exists()) {
+                        targetFile.delete()
+                    }
+                } catch (ignored: Exception) {}
+                throw e
+            }
             // Smart Fallback System: generate a small synthetic WAV file containing standard audio beep/silence
             // to ensure offline playback never crashes if the remote GitHub files are temporarily offline or slow.
             if (!targetFile.exists() || targetFile.length() == 0L) {

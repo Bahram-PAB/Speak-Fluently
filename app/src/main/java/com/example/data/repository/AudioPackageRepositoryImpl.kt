@@ -30,6 +30,31 @@ class AudioPackageRepositoryImpl(
         if (!exists()) mkdirs()
     }
 
+    private fun copyAssetToLocalIfPresent(fileName: String, targetFile: File) {
+        if (targetFile.exists() && targetFile.length() > 0L) return
+        
+        val categories = listOf("daily", "ielts", "interview")
+        val extensions = listOf("wav", "mp3")
+        
+        for (category in categories) {
+            for (ext in extensions) {
+                val assetPath = "audio/$category/$fileName.$ext"
+                try {
+                    context.assets.open(assetPath).use { inputStream ->
+                        // Found in assets! Copy to local storage
+                        targetFile.parentFile?.apply { if (!exists()) mkdirs() }
+                        java.io.FileOutputStream(targetFile).use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                        return
+                    }
+                } catch (ignored: Exception) {
+                    // Try next combination
+                }
+            }
+        }
+    }
+
     override fun getPackages(): Flow<List<AudioPackage>> = flow {
         // Trigger automated clean up of packages older than 1 week
         try {
@@ -47,14 +72,29 @@ class AudioPackageRepositoryImpl(
             "https://raw.githubusercontent.com/$repo/$branch"
         }
 
-        val remoteMetadata = remotePackages.getRemotePackagesMetadata()
+        val remoteMetadata = remotePackages.getRemotePackagesMetadata(repo, branch, pathPrefix)
         
         val mappedList = remoteMetadata.map { pkg ->
             val updatedFiles = pkg.files.map { file ->
-                val relativePath = file.audioUrl.substringAfter("main/packages/")
-                val updatedUrl = "$baseUrl/$relativePath"
+                val relativePath = if (file.audioUrl.contains("main/packages/")) {
+                    file.audioUrl.substringAfter("main/packages/")
+                } else {
+                    file.audioUrl.substringAfterLast("/")
+                }
+                
+                val updatedUrl = if (file.audioUrl.contains("main/packages/")) {
+                    "$baseUrl/$relativePath"
+                } else {
+                    file.audioUrl
+                }
+                
                 val ext = relativePath.substringAfterLast(".", "wav")
                 val localFile = File(downloadsDir, "${file.id}.$ext")
+                
+                // Proactively copy from assets if available offline in APK
+                try {
+                    copyAssetToLocalIfPresent(file.id, localFile)
+                } catch (ignored: Exception) {}
                 
                 val resolvedLocalPath = if (localFile.exists() && localFile.length() > 0L) {
                     localFile.absolutePath
@@ -75,23 +115,36 @@ class AudioPackageRepositoryImpl(
         list.find { it.id == id }
     }
 
-    override fun downloadFile(file: AudioFile): Flow<DownloadStatus> = flow {
-        val relativePath = file.audioUrl.substringAfter("main/packages/")
+    override fun downloadFile(file: AudioFile, force: Boolean): Flow<DownloadStatus> = flow {
+        val relativePath = if (file.audioUrl.contains("main/packages/")) {
+            file.audioUrl.substringAfter("main/packages/")
+        } else {
+            file.audioUrl.substringAfterLast("/")
+        }
         val ext = relativePath.substringAfterLast(".", "wav")
         val localFile = File(downloadsDir, "${file.id}.$ext")
 
         emit(DownloadStatus.Progress(10))
-        if (localFile.exists() && localFile.length() > 0L) {
-            emit(DownloadStatus.Success(localFile.absolutePath))
-            return@flow
+        if (!force && localFile.exists() && localFile.length() > 0L) {
+            // Check if it's a dummy beep file (exactly 48044 bytes). If yes, let's force re-download it!
+            if (localFile.length() != 48044L) {
+                emit(DownloadStatus.Success(localFile.absolutePath))
+                return@flow
+            }
         }
 
         emit(DownloadStatus.Progress(40))
         try {
-            val downloadedFile = remotePackages.downloadUrlToFile(file.audioUrl, localFile, file.text)
+            val downloadedFile = remotePackages.downloadUrlToFile(file.audioUrl, localFile, file.text, throwOnError = true)
             emit(DownloadStatus.Progress(100))
             emit(DownloadStatus.Success(downloadedFile.absolutePath))
         } catch (e: Exception) {
+            // Delete target file if it was created partially, so it can be retried cleanly next time
+            try {
+                if (localFile.exists()) {
+                    localFile.delete()
+                }
+            } catch (ignored: Exception) {}
             emit(DownloadStatus.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -225,7 +278,7 @@ class AudioPackageRepositoryImpl(
             "https://raw.githubusercontent.com/$repo/$branch"
         }
 
-        val remoteMetadata = remotePackages.getRemotePackagesMetadata()
+        val remoteMetadata = remotePackages.getRemotePackagesMetadata(repo, branch, pathPrefix)
         for (pkg in remoteMetadata) {
             val key = androidx.datastore.preferences.core.longPreferencesKey("completed_time_${pkg.id}")
             val completedTime = context.dataStore.data.map { it[key] }.first()
@@ -233,7 +286,11 @@ class AudioPackageRepositoryImpl(
                 val oneWeekMs = 7L * 24 * 60 * 60 * 1000L
                 if (System.currentTimeMillis() - completedTime > oneWeekMs) {
                     for (file in pkg.files) {
-                        val relativePath = file.audioUrl.substringAfter("main/packages/")
+                        val relativePath = if (file.audioUrl.contains("main/packages/")) {
+                            file.audioUrl.substringAfter("main/packages/")
+                        } else {
+                            file.audioUrl.substringAfterLast("/")
+                        }
                         val ext = relativePath.substringAfterLast(".", "wav")
                         val localFile = File(downloadsDir, "${file.id}.$ext")
                         if (localFile.exists()) {

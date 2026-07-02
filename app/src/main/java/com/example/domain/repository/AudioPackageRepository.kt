@@ -16,7 +16,7 @@ sealed interface DownloadStatus {
 interface AudioPackageRepository {
     fun getPackages(): Flow<List<AudioPackage>>
     fun getPackageById(id: String): Flow<AudioPackage?>
-    fun downloadFile(file: AudioFile): Flow<DownloadStatus>
+    fun downloadFile(file: AudioFile, force: Boolean = false): Flow<DownloadStatus>
     fun getSettings(): Flow<Settings>
     suspend fun saveSettings(settings: Settings)
     fun getPremiumStatus(): Flow<PremiumStatus>

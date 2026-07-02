@@ -78,7 +78,7 @@ class SettingsViewModel(
 
                 var completedCount = 0
                 for (file in allFiles) {
-                    repository.downloadFile(file).collect { status ->
+                    repository.downloadFile(file, force = true).collect { status ->
                         when (status) {
                             is com.example.domain.repository.DownloadStatus.Success -> {
                                 completedCount++
