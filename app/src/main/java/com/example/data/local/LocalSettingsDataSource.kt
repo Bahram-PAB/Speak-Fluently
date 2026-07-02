@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.domain.model.PremiumStatus
 import com.example.domain.model.Settings
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,25 @@ class LocalSettingsDataSource(private val context: Context) {
         
         private val KEY_IS_PREMIUM = booleanPreferencesKey("is_premium")
         private val KEY_ACTIVATION_CODE = stringPreferencesKey("activation_code")
+        
+        private val KEY_PLAYED_FILES = stringSetPreferencesKey("played_files")
+    }
+
+    val playedFilesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[KEY_PLAYED_FILES] ?: emptySet()
+    }
+
+    suspend fun markFileAsPlayed(fileId: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[KEY_PLAYED_FILES] ?: emptySet()
+            preferences[KEY_PLAYED_FILES] = current + fileId
+        }
+    }
+
+    suspend fun clearPlayedFiles() {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_PLAYED_FILES] = emptySet()
+        }
     }
 
     val settingsFlow: Flow<Settings> = context.dataStore.data.map { preferences ->

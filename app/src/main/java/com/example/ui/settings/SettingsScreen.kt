@@ -441,13 +441,26 @@ fun SettingsScreen(
                 },
                 title = {
                     Text(
-                        text = if (currentLanguageCode == "fa") "عملیات موفقیت‌آمیز" else "Download Completed",
+                        text = if (state.failedCount == 0) {
+                            if (currentLanguageCode == "fa") "عملیات موفقیت‌آمیز" else "Download Completed"
+                        } else if (state.successCount > 0) {
+                            if (currentLanguageCode == "fa") "دریافت ناقص" else "Partial Download"
+                        } else {
+                            if (currentLanguageCode == "fa") "خطا در دریافت" else "Download Failed"
+                        },
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (state.failedCount == 0) MaterialTheme.colorScheme.primary else if (state.successCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                 },
                 text = {
-                    Text(text = if (currentLanguageCode == "fa") "تمامی فایل‌های صوتی با موفقیت دریافت و ذخیره شدند!" else "All practice audio files downloaded and saved offline successfully!")
+                    val message = if (state.failedCount == 0) {
+                        if (currentLanguageCode == "fa") "تمامی فایل‌های صوتی (${state.successCount}) با موفقیت دریافت و ذخیره شدند!" else "All (${state.successCount}) practice audio files downloaded and saved offline successfully!"
+                    } else if (state.successCount > 0) {
+                        if (currentLanguageCode == "fa") "تعداد ${state.successCount} فایل با موفقیت دریافت شد، اما دریافت ${state.failedCount} فایل با خطا مواجه شد. لطفاً اتصال اینترنت یا آدرس و ساختار مخزن خود در گیت‌هاب را بررسی کنید." else "${state.successCount} files downloaded successfully, but ${state.failedCount} files failed. Please check your internet connection or GitHub repository structure."
+                    } else {
+                        if (currentLanguageCode == "fa") "خطا در دریافت فایل‌ها! تمامی فایل‌های صوتی با خطا مواجه شدند. لطفاً اتصال اینترنت، نام مخزن، نام شاخه گیت‌هاب و نام‌گذاری فایل‌ها را بررسی کنید." else "Download failed! All audio files failed to download. Please verify your internet connection, repository name, branch, and file naming/structure."
+                    }
+                    Text(text = message)
                 }
             )
         }

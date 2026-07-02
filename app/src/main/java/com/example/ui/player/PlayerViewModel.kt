@@ -62,21 +62,35 @@ class PlayerViewModel(
             
             try {
                 val settings = repository.getSettings().first()
-                val audioPackage = repository.getPackageById(packageId).first()
+                var audioPackage = repository.getPackageById(packageId).first()
+                
+                if (audioPackage == null) {
+                    audioPackage = repository.getPackages().first().firstOrNull()
+                }
                 
                 if (audioPackage == null) {
                     _uiState.update { it.copy(sessionState = SessionState.Idle) }
                     return@launch
                 }
 
-                // Shuffle and take questions based on settings count
-                val shuffledQuestions = audioPackage.files.shuffled()
-                    .take(settings.questionsPerSession)
+                val playedIds = repository.getPlayedFileIds().first()
+                var availableQuestions = audioPackage.files.filter { file ->
+                    !playedIds.contains(file.id)
+                }
+
+                // If all files in this package are played, reset played status for this package
+                if (availableQuestions.isEmpty()) {
+                    repository.clearPlayedFiles()
+                    availableQuestions = audioPackage.files
+                }
+
+                // Play 5 (or specified questions per session) sequentially
+                val selectedQuestions = availableQuestions.take(settings.questionsPerSession)
 
                 _uiState.update {
                     it.copy(
                         currentPackage = audioPackage,
-                        questions = shuffledQuestions,
+                        questions = selectedQuestions,
                         settings = settings,
                         sessionState = SessionState.PlayingAudio(0),
                         isPaused = false
@@ -111,6 +125,11 @@ class PlayerViewModel(
         }
 
         val question = state.questions[index]
+        
+        // Mark as played immediately when played
+        viewModelScope.launch {
+            repository.markFileAsPlayed(question.id)
+        }
 
         try {
             mediaPlayer = MediaPlayer().apply {

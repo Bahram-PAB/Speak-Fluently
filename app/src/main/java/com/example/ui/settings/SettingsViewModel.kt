@@ -20,7 +20,7 @@ sealed interface DownloadProgressState {
     object CheckingAccess : DownloadProgressState
     data class AccessSuccess(val message: String) : DownloadProgressState
     data class Downloading(val progress: Int, val currentFileIndex: Int, val totalFiles: Int) : DownloadProgressState
-    object Finished : DownloadProgressState
+    data class Finished(val successCount: Int, val failedCount: Int) : DownloadProgressState
     data class Error(val message: String) : DownloadProgressState
 }
 
@@ -66,44 +66,32 @@ class SettingsViewModel(
 
             try {
                 val packages = repository.getPackages().first()
-                val allFiles = packages.flatMap { it.files }
-                
-                // Smart scan: Check in parallel which files actually exist on GitHub
-                val existingFiles = java.util.Collections.synchronizedList(mutableListOf<com.example.domain.model.AudioFile>())
-                kotlinx.coroutines.coroutineScope {
-                    allFiles.map { file ->
-                        launch(kotlinx.coroutines.Dispatchers.IO) {
-                            val exists = repository.checkFileExistsOnGithub(file.audioUrl)
-                            if (exists) {
-                                existingFiles.add(file)
-                            }
-                        }
-                    }
-                }
-                
-                // Fallback to all files if scan failed to find anything (e.g. rate limit / network glitch)
-                val filesToDownload = if (existingFiles.isNotEmpty()) existingFiles else allFiles
+                val filesToDownload = packages.flatMap { it.files }
                 val totalCount = filesToDownload.size
                 
                 if (totalCount == 0) {
-                    _downloadState.value = DownloadProgressState.Finished
+                    _downloadState.value = DownloadProgressState.Finished(0, 0)
                     return@launch
                 }
 
                 _downloadState.value = DownloadProgressState.Downloading(0, 0, totalCount)
 
                 var completedCount = 0
+                var successCount = 0
+                var failedCount = 0
                 for (file in filesToDownload) {
                     repository.downloadFile(file, force = true).collect { status ->
                         when (status) {
                             is com.example.domain.repository.DownloadStatus.Success -> {
                                 completedCount++
+                                successCount++
                                 val percentage = (completedCount * 100) / totalCount
                                 _downloadState.value = DownloadProgressState.Downloading(percentage, completedCount, totalCount)
                             }
                             is com.example.domain.repository.DownloadStatus.Error -> {
                                 // Keep downloading other files even if one fails
                                 completedCount++
+                                failedCount++
                                 val percentage = (completedCount * 100) / totalCount
                                 _downloadState.value = DownloadProgressState.Downloading(percentage, completedCount, totalCount)
                             }
@@ -112,7 +100,7 @@ class SettingsViewModel(
                     }
                 }
                 
-                _downloadState.value = DownloadProgressState.Finished
+                _downloadState.value = DownloadProgressState.Finished(successCount, failedCount)
             } catch (e: Exception) {
                 _downloadState.value = DownloadProgressState.Error("خطا در جریان دانلود: ${e.localizedMessage}")
             }

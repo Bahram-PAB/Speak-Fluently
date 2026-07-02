@@ -185,6 +185,18 @@ class AudioPackageRepositoryImpl(
         return isValid
     }
 
+    override fun getPlayedFileIds(): Flow<Set<String>> {
+        return localSettings.playedFilesFlow
+    }
+
+    override suspend fun markFileAsPlayed(fileId: String) {
+        localSettings.markFileAsPlayed(fileId)
+    }
+
+    override suspend fun clearPlayedFiles() {
+        localSettings.clearPlayedFiles()
+    }
+
     override suspend fun checkGithubAccess(repo: String): String? = withContext(Dispatchers.IO) {
         val repoClean = extractGithubRepo(repo)
         if (repoClean.isEmpty()) {

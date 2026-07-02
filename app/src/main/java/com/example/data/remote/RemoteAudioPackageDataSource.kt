@@ -22,6 +22,87 @@ class RemoteAudioPackageDataSource(private val context: Context) {
             return defaultList
         }
 
+        // 1. Try to fetch recursively all audio files using Git Trees API
+        try {
+            val treeUrl = "https://api.github.com/repos/$repo/git/trees/$branch?recursive=1"
+            val request = Request.Builder()
+                .url(treeUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
+            
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val bodyString = response.body?.string() ?: ""
+                    if (bodyString.isNotEmpty()) {
+                        val json = org.json.JSONObject(bodyString)
+                        val treeArray = json.optJSONArray("tree")
+                        if (treeArray != null) {
+                            val filesList = mutableListOf<AudioFile>()
+                            for (i in 0 until treeArray.length()) {
+                                val item = treeArray.getJSONObject(i)
+                                val type = item.optString("type", "")
+                                if (type == "blob") { // blob means file
+                                    val path = item.optString("path", "")
+                                    val lowercasePath = path.lowercase()
+                                    // filter for audio files
+                                    if (lowercasePath.endsWith(".wav") || 
+                                        lowercasePath.endsWith(".mp3") || 
+                                        lowercasePath.endsWith(".m4a") || 
+                                        lowercasePath.endsWith(".ogg") || 
+                                        lowercasePath.endsWith(".aac") || 
+                                        lowercasePath.endsWith(".flac")) {
+                                        
+                                        // Filter by prefix if specified by user
+                                        if (pathPrefix.isEmpty() || path.startsWith(pathPrefix)) {
+                                            val fileName = path.substringAfterLast("/")
+                                            val nameWithoutExt = fileName.substringBeforeLast(".")
+                                            val text = nameWithoutExt.replace("_", " ")
+                                                .replace("-", " ")
+                                                .trim()
+                                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                                            
+                                            val audioUrl = "https://raw.githubusercontent.com/$repo/$branch/$path"
+                                            val fileId = path.replace("/", "_").replace(".", "_")
+                                            
+                                            filesList.add(
+                                                AudioFile(
+                                                    id = fileId,
+                                                    text = text,
+                                                    audioUrl = audioUrl,
+                                                    packageName = "pkg_github_files",
+                                                    localPath = null
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            if (filesList.isNotEmpty()) {
+                                val packagesList = mutableListOf<AudioPackage>()
+                                val chunked = filesList.chunked(5)
+                                chunked.forEachIndexed { index, chunk ->
+                                    val pkgId = "pkg_github_part_${index + 1}"
+                                    val updatedChunk = chunk.map { it.copy(packageName = pkgId) }
+                                    packagesList.add(
+                                        AudioPackage(
+                                            id = pkgId,
+                                            name = "پکیج تمرینی شماره ${index + 1}",
+                                            description = "این پکیج شامل ${updatedChunk.size} فایل صوتی تمرینی دانلود شده از مخزن شماست.",
+                                            files = updatedChunk,
+                                            isPremiumOnly = false
+                                        )
+                                    )
+                                }
+                                return packagesList
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val baseUrl = if (pathPrefix.isNotEmpty()) {
             "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
         } else {

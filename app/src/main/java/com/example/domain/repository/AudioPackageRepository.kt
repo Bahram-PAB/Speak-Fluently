@@ -25,4 +25,7 @@ interface AudioPackageRepository {
     suspend fun checkFileExistsOnGithub(url: String): Boolean
     suspend fun markPackageCompleted(packageId: String)
     suspend fun triggerCompletedPackagesCleanUp()
+    fun getPlayedFileIds(): Flow<Set<String>>
+    suspend fun markFileAsPlayed(fileId: String)
+    suspend fun clearPlayedFiles()
 }
