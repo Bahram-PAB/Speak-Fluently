@@ -82,13 +82,13 @@ class AudioPackageRepositoryImpl(
             
             val mappedList = remoteMetadata.map { pkg ->
                 val updatedFiles = pkg.files.map { file ->
-                    val relativePath = if (file.audioUrl.contains("main/packages/")) {
+                    val relativePath = if (file.audioUrl.contains("username/speakfluently-audio")) {
                         file.audioUrl.substringAfter("main/packages/")
                     } else {
                         file.audioUrl.substringAfterLast("/")
                     }
                     
-                    val updatedUrl = if (file.audioUrl.contains("main/packages/")) {
+                    val updatedUrl = if (file.audioUrl.contains("username/speakfluently-audio")) {
                         "$baseUrl/$relativePath"
                     } else {
                         file.audioUrl
@@ -130,7 +130,7 @@ class AudioPackageRepositoryImpl(
     }
 
     override fun downloadFile(file: AudioFile, force: Boolean): Flow<DownloadStatus> = flow {
-        val relativePath = if (file.audioUrl.contains("main/packages/")) {
+        val relativePath = if (file.audioUrl.contains("username/speakfluently-audio")) {
             file.audioUrl.substringAfter("main/packages/")
         } else {
             file.audioUrl.substringAfterLast("/")
@@ -224,56 +224,64 @@ class AudioPackageRepositoryImpl(
             return@withContext "خطای شبکه در برقراری ارتباط با گیت‌هاب: ${e.localizedMessage}. لطفاً اتصال اینترنت خود را بررسی کنید."
         }
 
-        // 2. The repo exists and is public! Now let's try to auto-detect branch and prefix
+        // 2. The repo exists and is public! Now let's try to auto-detect branch and check for audio files
         val branches = listOf("main", "master")
-        val prefixes = listOf("packages", "")
-        
         for (branch in branches) {
-            for (prefix in prefixes) {
-                // We will test both conversational speech and IELTS speech file to find a match
-                val testFiles = listOf("daily/speech-1.wav", "ielts/speech-1.wav")
-                for (testFile in testFiles) {
-                    val testUrl = if (prefix.isNotEmpty()) {
-                        "https://raw.githubusercontent.com/$repoClean/$branch/$prefix/$testFile"
-                    } else {
-                        "https://raw.githubusercontent.com/$repoClean/$branch/$testFile"
-                    }
-                    
-                    val request = okhttp3.Request.Builder()
-                        .url(testUrl)
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                        .build()
-                    try {
-                        client.newCall(request).execute().use { response ->
-                            if (response.isSuccessful) {
-                                // Successfully matched! Save these configuration settings
+            val treeUrl = "https://api.github.com/repos/$repoClean/git/trees/$branch?recursive=1"
+            val request = okhttp3.Request.Builder()
+                .url(treeUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val bodyString = response.body?.string() ?: ""
+                        if (bodyString.isNotEmpty()) {
+                            val json = org.json.JSONObject(bodyString)
+                            val treeArray = json.optJSONArray("tree")
+                            if (treeArray != null && treeArray.length() > 0) {
+                                // Found valid branch! Let's detect if there are any audio files
+                                var hasAudio = false
+                                for (i in 0 until treeArray.length()) {
+                                    val item = treeArray.getJSONObject(i)
+                                    val path = item.optString("path", "").lowercase()
+                                    if (path.endsWith(".wav") || 
+                                        path.endsWith(".mp3") || 
+                                        path.endsWith(".m4a") || 
+                                        path.endsWith(".ogg") || 
+                                        path.endsWith(".aac") || 
+                                        path.endsWith(".flac")) {
+                                        hasAudio = true
+                                        break
+                                    }
+                                }
+                                
                                 val currentSettings = localSettings.settingsFlow.first()
                                 localSettings.saveSettings(
                                     currentSettings.copy(
                                         githubAudioRepo = repoClean,
                                         githubBranch = branch,
-                                        githubPathPrefix = prefix
+                                        githubPathPrefix = "" // Setting pathPrefix to empty lets it download any audio files from any folder/subfolder!
                                     )
                                 )
                                 return@withContext null // Success!
                             }
                         }
-                    } catch (e: Exception) {
-                        // ignore and try next combination
                     }
                 }
+            } catch (e: Exception) {
+                // Ignore and try next branch
             }
         }
         
-        // 3. If repo exists but we couldn't fetch specific files, do not block the user!
-        // Save the cleaned repository name with default main branch and packages prefix so they can try downloading anyway.
+        // 3. Fallback: Save with main branch and empty prefix so the user is not blocked
         try {
             val currentSettings = localSettings.settingsFlow.first()
             localSettings.saveSettings(
                 currentSettings.copy(
                     githubAudioRepo = repoClean,
                     githubBranch = "main",
-                    githubPathPrefix = "packages"
+                    githubPathPrefix = ""
                 )
             )
         } catch (ignored: Exception) {}
@@ -331,7 +339,7 @@ class AudioPackageRepositoryImpl(
                 val oneWeekMs = 7L * 24 * 60 * 60 * 1000L
                 if (System.currentTimeMillis() - completedTime > oneWeekMs) {
                     for (file in pkg.files) {
-                        val relativePath = if (file.audioUrl.contains("main/packages/")) {
+                        val relativePath = if (file.audioUrl.contains("username/speakfluently-audio")) {
                             file.audioUrl.substringAfter("main/packages/")
                         } else {
                             file.audioUrl.substringAfterLast("/")
