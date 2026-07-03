@@ -12,15 +12,12 @@ import com.example.domain.model.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import androidx.datastore.preferences.core.edit
 import com.example.data.local.dataStore
-import com.example.data.local.DataStoreKeys
 import java.io.File
 
 class AudioPackageRepositoryImpl(
@@ -31,27 +28,12 @@ class AudioPackageRepositoryImpl(
 
     private val downloadsDir = File(context.filesDir, "audio_downloads").apply { if (!exists()) mkdirs() }
     private var cachedPackages: List<AudioPackage>? = null
-    private val playedFileIdsKey = DataStoreKeys.playedFileIds
-    private val _playedFileIds = MutableStateFlow<Set<String>>(emptySet())
 
-    init {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            context.dataStore.data.map { it[playedFileIdsKey] ?: emptySet() }.collect { _playedFileIds.value = it }
-        }
-    }
+    override fun getPlayedFileIds(): Flow<Set<String>> = localSettings.playedFilesFlow
 
-    override fun getPlayedFileIds(): Flow<Set<String>> = _playedFileIds
+    override suspend fun markFileAsPlayed(fileId: String) = localSettings.markFileAsPlayed(fileId)
 
-    override suspend fun markFileAsPlayed(fileId: String) {
-        context.dataStore.edit { prefs ->
-            val current = prefs[playedFileIdsKey] ?: emptySet()
-            prefs[playedFileIdsKey] = current + fileId
-        }
-    }
-
-    override suspend fun clearPlayedFiles() {
-        context.dataStore.edit { prefs -> prefs.remove(playedFileIdsKey) }
-    }
+    override suspend fun clearPlayedFiles() = localSettings.clearPlayedFiles()
 
     private fun copyAssetToLocalIfPresent(file: AudioFile, targetFile: File): Boolean {
         if (targetFile.exists() && targetFile.length() > 0L) return true
@@ -129,33 +111,19 @@ class AudioPackageRepositoryImpl(
 
     override suspend fun checkGithubAccess(repo: String): String? = withContext(Dispatchers.IO) {
         val repoClean = extractGithubRepo(repo)
-        if (repoClean.isEmpty()) {
-            return@withContext "\u0646\u0627\u0645 \u06a9\u0627\u0631\u0628\u0631\u06cc \u06cc\u0627 \u0646\u0627\u0645 \u0645\u062e\u0632\u0646 \u0646\u0627\u0645\u0639\u062a\u0628\u0631 \u0627\u0633\u062a. \u0641\u0631\u0645\u062a \u0635\u062d\u06cc\u062f: username/repository"
-        }
+        if (repoClean.isEmpty()) return@withContext "Invalid format. Use: username/repository"
         val client = okhttp3.OkHttpClient()
         try {
-            val request = okhttp3.Request.Builder()
-                .url("https://github.com/$repoClean")
-                .header("User-Agent", "Mozilla/5.0")
-                .build()
+            val request = okhttp3.Request.Builder().url("https://github.com/$repoClean").header("User-Agent", "Mozilla/5.0").build()
             val response = client.newCall(request).execute()
-            if (response.code == 404) {
-                return@withContext "\u0645\u062e\u0632\u0646 '$repoClean' \u06cc\u0627\u0641\u062a \u0646\u0634\u062f."
-            }
-            if (!response.isSuccessful) {
-                return@withContext "\u062e\u0637\u0627 \u062f\u0631 \u0628\u0631\u0642\u0631\u0627\u0631\u06cc \u0628\u0627 \u06af\u06cc\u062a\u0647\u0627\u0628 (\u06a9\u062f \u062e\u0637\u0627: ${response.code})"
-            }
+            if (response.code == 404) return@withContext "Repository '$repoClean' not found."
+            if (!response.isSuccessful) return@withContext "GitHub API error (code: ${response.code})"
             response.close()
-        } catch (e: Exception) {
-            return@withContext "\u062e\u0637\u0627\u06cc \u0634\u0628\u06a9\u0647: ${e.localizedMessage}"
-        }
+        } catch (e: Exception) { return@withContext "Network error: ${e.localizedMessage}" }
 
         for (branch in listOf("main", "master")) {
             try {
-                val request = okhttp3.Request.Builder()
-                    .url("https://api.github.com/repos/$repoClean/git/trees/$branch?recursive=1")
-                    .header("User-Agent", "Mozilla/5.0")
-                    .build()
+                val request = okhttp3.Request.Builder().url("https://api.github.com/repos/$repoClean/git/trees/$branch?recursive=1").header("User-Agent", "Mozilla/5.0").build()
                 val response = client.newCall(request).execute()
                 if (response.isSuccessful) {
                     val body = response.body?.string() ?: ""
