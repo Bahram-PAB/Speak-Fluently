@@ -12,12 +12,15 @@ import com.example.domain.model.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import androidx.datastore.preferences.core.edit
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import com.example.data.local.dataStore
+import com.example.data.local.DataStoreKeys
 import java.io.File
 
 class AudioPackageRepositoryImpl(
@@ -28,11 +31,28 @@ class AudioPackageRepositoryImpl(
 
     private val downloadsDir = File(context.filesDir, "audio_downloads").apply { if (!exists()) mkdirs() }
     private var cachedPackages: List<AudioPackage>? = null
+    private val playedFileIdsKey = DataStoreKeys.playedFileIds
+    private val _playedFileIds = MutableStateFlow<Set<String>>(emptySet())
 
-    /**
-     * Copies a file from APK assets to local storage using the file's assetPath.
-     * Returns true if copy was successful, false otherwise.
-     */
+    init {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            context.dataStore.data.map { it[playedFileIdsKey] ?: emptySet() }.collect { _playedFileIds.value = it }
+        }
+    }
+
+    override fun getPlayedFileIds(): Flow<Set<String>> = _playedFileIds
+
+    override suspend fun markFileAsPlayed(fileId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[playedFileIdsKey] ?: emptySet()
+            prefs[playedFileIdsKey] = current + fileId
+        }
+    }
+
+    override suspend fun clearPlayedFiles() {
+        context.dataStore.edit { prefs -> prefs.remove(playedFileIdsKey) }
+    }
+
     private fun copyAssetToLocalIfPresent(file: AudioFile, targetFile: File): Boolean {
         if (targetFile.exists() && targetFile.length() > 0L) return true
         val assetPath = file.assetPath ?: return false
@@ -109,50 +129,74 @@ class AudioPackageRepositoryImpl(
 
     override suspend fun checkGithubAccess(repo: String): String? = withContext(Dispatchers.IO) {
         val repoClean = extractGithubRepo(repo)
-        if (repoClean.isEmpty()) return@withContext "\u0646\u0627\u0645 \u06a9\u0627\u0631\u0628\u0631\u06cc \u06cc\u0627 \u0646\u0627\u0645 \u0645\u062e\u0632\u0646 \u0646\u0627\u0645\u0639\u062a\u0628\u0631 \u0627\u0633\u062a. \u0641\u0631\u0645\u062a \u0635\u062d\u06cc\u062d: username/repository"
+        if (repoClean.isEmpty()) {
+            return@withContext "\u0646\u0627\u0645 \u06a9\u0627\u0631\u0628\u0631\u06cc \u06cc\u0627 \u0646\u0627\u0645 \u0645\u062e\u0632\u0646 \u0646\u0627\u0645\u0639\u062a\u0628\u0631 \u0627\u0633\u062a. \u0641\u0631\u0645\u062a \u0635\u062d\u06cc\u062f: username/repository"
+        }
         val client = okhttp3.OkHttpClient()
         try {
-            client.newCall(okhttp3.Request.Builder().url("https://github.com/$repoClean").header("User-Agent", "Mozilla/5.0").build()).execute().use { r ->
-                if (r.code == 404) return@withContext "\u0645\u062e\u0632\u0646 '$repoClean' \u06cc\u0627\u0641\u062a \u0646\u0634\u062f. \u0644\u0637\u0641\u0627\u064b \u0627\u0637\u0645\u06cc\u0646\u0627\u0646 \u062d\u0627\u0635\u0644 \u06a9\u0646\u06cc\u062f \u0645\u062e\u0632\u0646 \u0639\u0645\u0648\u0645\u06cc (Public) \u0627\u0633\u062a.\"\n                if (!r.isSuccessful) return@withContext "\u062e\u0637\u0627 \u062f\u0631 \u0628\u0631\u0642\u0631\u0627\u0631\u06cc \u0628\u0627 \u06af\u06cc\u062a\u0647\u0627\u0628 (\u06a9\u062f \u062e\u0637\u0627: ${r.code})"
+            val request = okhttp3.Request.Builder()
+                .url("https://github.com/$repoClean")
+                .header("User-Agent", "Mozilla/5.0")
+                .build()
+            val response = client.newCall(request).execute()
+            if (response.code == 404) {
+                return@withContext "\u0645\u062e\u0632\u0646 '$repoClean' \u06cc\u0627\u0641\u062a \u0646\u0634\u062f."
             }
-        } catch (e: Exception) { return@withContext "\u062e\u0637\u0627\u06cc \u0634\u0628\u06a9\u0647: ${e.localizedMessage}" }
+            if (!response.isSuccessful) {
+                return@withContext "\u062e\u0637\u0627 \u062f\u0631 \u0628\u0631\u0642\u0631\u0627\u0631\u06cc \u0628\u0627 \u06af\u06cc\u062a\u0647\u0627\u0628 (\u06a9\u062f \u062e\u0637\u0627: ${response.code})"
+            }
+            response.close()
+        } catch (e: Exception) {
+            return@withContext "\u062e\u0637\u0627\u06cc \u0634\u0628\u06a9\u0647: ${e.localizedMessage}"
+        }
 
         for (branch in listOf("main", "master")) {
             try {
-                client.newCall(okhttp3.Request.Builder().url("https://api.github.com/repos/$repoClean/git/trees/$branch?recursive=1").header("User-Agent", "Mozilla/5.0").build()).execute().use { r ->
-                    if (r.isSuccessful) {
-                        val body = r.body?.string() ?: ""
-                        if (body.isNotEmpty()) {
-                            val tree = org.json.JSONObject(body).optJSONArray("tree")
-                            if (tree != null && tree.length() > 0) {
-                                var detectedPrefix = ""
-                                for (i in 0 until tree.length()) {
-                                    val item = tree.getJSONObject(i)
-                                    val path = item.optString("path", "")
-                                    val segs = path.split("/")
-                                    val lp = path.lowercase()
-                                    if (segs.size == 2 && (lp.endsWith(".wav") || lp.endsWith(".mp3") || lp.endsWith(".m4a"))) {
-                                        detectedPrefix = segs[0]
-                                        break
-                                    }
+                val request = okhttp3.Request.Builder()
+                    .url("https://api.github.com/repos/$repoClean/git/trees/$branch?recursive=1")
+                    .header("User-Agent", "Mozilla/5.0")
+                    .build()
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val body = response.body?.string() ?: ""
+                    if (body.isNotEmpty()) {
+                        val tree = org.json.JSONObject(body).optJSONArray("tree")
+                        if (tree != null && tree.length() > 0) {
+                            var detectedPrefix = ""
+                            for (i in 0 until tree.length()) {
+                                val item = tree.getJSONObject(i)
+                                val path = item.optString("path", "")
+                                val segs = path.split("/")
+                                val lp = path.lowercase()
+                                if (segs.size == 2 && (lp.endsWith(".wav") || lp.endsWith(".mp3") || lp.endsWith(".m4a"))) {
+                                    detectedPrefix = segs[0]
+                                    break
                                 }
-                                val cs = localSettings.settingsFlow.first()
-                                localSettings.saveSettings(cs.copy(githubAudioRepo = repoClean, githubBranch = branch, githubPathPrefix = detectedPrefix))
-                                return@withContext null
                             }
+                            val cs = localSettings.settingsFlow.first()
+                            localSettings.saveSettings(cs.copy(githubAudioRepo = repoClean, githubBranch = branch, githubPathPrefix = detectedPrefix))
+                            return@withContext null
                         }
                     }
                 }
+                response.close()
             } catch (ignored: Exception) {}
         }
-        try { val cs = localSettings.settingsFlow.first(); localSettings.saveSettings(cs.copy(githubAudioRepo = repoClean, githubBranch = "main", githubPathPrefix = "")) } catch (ignored: Exception) {}
+        try {
+            val cs = localSettings.settingsFlow.first()
+            localSettings.saveSettings(cs.copy(githubAudioRepo = repoClean, githubBranch = "main", githubPathPrefix = ""))
+        } catch (ignored: Exception) {}
         null
     }
 
     override suspend fun checkFileExistsOnGithub(url: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            okhttp3.OkHttpClient.Builder().connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS).readTimeout(5, java.util.concurrent.TimeUnit.SECONDS).build()
-                .newCall(okhttp3.Request.Builder().url(url).head().header("User-Agent", "Mozilla/5.0").build()).execute().use { it.isSuccessful }
+            val client = okhttp3.OkHttpClient.Builder().connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS).readTimeout(5, java.util.concurrent.TimeUnit.SECONDS).build()
+            val request = okhttp3.Request.Builder().url(url).head().header("User-Agent", "Mozilla/5.0").build()
+            val response = client.newCall(request).execute()
+            val result = response.isSuccessful
+            response.close()
+            result
         } catch (e: Exception) { false }
     }
 
@@ -170,7 +214,10 @@ class AudioPackageRepositoryImpl(
             val key = androidx.datastore.preferences.core.longPreferencesKey("completed_time_${pkg.id}")
             val ct = context.dataStore.data.map { it[key] }.first()
             if (ct != null && ct > 0L && System.currentTimeMillis() - ct > 7L * 24 * 60 * 60 * 1000L) {
-                for (file in pkg.files) { val f = File(downloadsDir, "${file.id}.${file.audioUrl.substringAfterLast(".", "wav")}"); if (f.exists()) f.delete() }
+                for (file in pkg.files) {
+                    val f = File(downloadsDir, "${file.id}.${file.audioUrl.substringAfterLast(".", "wav")}")
+                    if (f.exists()) f.delete()
+                }
                 context.dataStore.edit { it[key] = 0L }
             }
         }

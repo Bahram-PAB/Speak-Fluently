@@ -17,6 +17,10 @@
     <string name="download_ready">Download Ready</string>
     <string name="premium_locked">Premium Feature</string>
     <string name="premium_locked_desc">Unlock this package by activating Premium in the Premium tab.</string>
+    <string name="download_error_label">Download Error</string>
+    <string name="package_contents_label">Package Contents</string>
+    <string name="retry_download_button">Retry Download</string>
+    <string name="download_button">Download</string>
 
     <!-- Player / Practice Screen -->
     <string name="practice_session">Practice Session</string>
@@ -60,4 +64,10 @@
     <string name="notification_title">Time for English Practice!</string>
     <string name="notification_body">Daily practice keeps your speaking skills sharp. Let\'s practice now!</string>
     <string name="notification_action_start">Start Practice</string>
+
+    <!-- Github Access Errors -->
+    <string name="github_repo_invalid_format">Invalid username or repository name. Correct format: username/repository</string>
+    <string name="github_repo_not_found">Repository \'%1$s\' not found. Please ensure it is public.</string>
+    <string name="github_network_error">Network error: %1$s</string>
+    <string name="github_api_error">Error connecting to GitHub (error code: %1$d)</string>
 </resources>

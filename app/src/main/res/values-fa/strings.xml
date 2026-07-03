@@ -17,6 +17,10 @@
     <string name="download_ready">آماده پخش</string>
     <string name="premium_locked">بسته ویژه</string>
     <string name="premium_locked_desc">این بسته قفل است. با فعال‌سازی نسخه ویژه در بخش ویژه آن را باز کنید.</string>
+    <string name="download_error_label">خطا در دانلود</string>
+    <string name="package_contents_label">محتویات بسته</string>
+    <string name="retry_download_button">تلاش مجدد برای دانلود</string>
+    <string name="download_button">دانلود</string>
 
     <!-- Player / Practice Screen -->
     <string name="practice_session">جلسه تمرین مکالمه</string>
@@ -60,4 +64,10 @@
     <string name="notification_title">زمان تمرین مکالمه انگلیسی رسیده است!</string>
     <string name="notification_body">تمرین روزانه مهارت صحبت کردن شما را روان‌تر می‌کند. تمرین را آغاز کنید!</string>
     <string name="notification_action_start">شروع تمرین</string>
+
+    <!-- Github Access Errors -->
+    <string name="github_repo_invalid_format">نام کاربری یا مخزن نامعتبر است. فرمت صحیح: username/repository</string>
+    <string name="github_repo_not_found">مخزن \'%1$s\' یافت نشد. لطفاً مطمئن شوید عمومی (Public) است.</string>
+    <string name="github_network_error">خطای شبکه: %1$s</string>
+    <string name="github_api_error">خطا در اتصال به GitHub (کد خطا: %1$d)</string>
 </resources>

@@ -36,67 +36,29 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-
     var selectedPackageForDetails by remember { mutableStateOf<AudioPackage?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.size(40.dp)
-                        ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp))
                             }
                         }
-                        
                         Spacer(modifier = Modifier.width(12.dp))
-                        
                         Column {
-                            Text(
-                                text = LocaleUtils.getString(context, R.string.app_name, languageCode),
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                text = LocaleUtils.getString(context, R.string.app_tagline, languageCode),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                            )
+                            Text(text = LocaleUtils.getString(context, R.string.app_name, languageCode), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                            Text(text = LocaleUtils.getString(context, R.string.app_tagline, languageCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                ),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = MaterialTheme.colorScheme.onBackground),
                 actions = {
-                    IconButton(
-                        onClick = onNavigateToPremium,
-                        modifier = Modifier
-                            .testTag("premium_shortcut")
-                            .clip(RoundedCornerShape(50))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Premium",
-                            tint = if (uiState.premiumStatus.isPremium) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                    IconButton(onClick = onNavigateToPremium, modifier = Modifier.testTag("premium_shortcut").clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.secondaryContainer)) {
+                        Icon(imageVector = Icons.Default.Star, contentDescription = "Premium", tint = if (uiState.premiumStatus.isPremium) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                 }
             )
@@ -104,49 +66,23 @@ fun HomeScreen(
         modifier = modifier
     ) { innerPadding ->
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.home_title, languageCode),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.home_subtitle, languageCode),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-                    )
+                    Text(text = LocaleUtils.getString(context, R.string.home_title, languageCode), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = LocaleUtils.getString(context, R.string.home_subtitle, languageCode), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
                 }
 
                 items(uiState.packages) { pkg ->
                     val isLocked = pkg.isPremiumOnly && !uiState.premiumStatus.isPremium
-                    
                     PackageCard(
                         audioPackage = pkg,
                         isLocked = isLocked,
                         languageCode = languageCode,
                         downloadStatuses = uiState.downloadStatuses,
                         onDownloadClick = { file -> viewModel.downloadFile(file) },
-                        onCardClick = {
-                            selectedPackageForDetails = if (selectedPackageForDetails?.id == pkg.id) null else pkg
-                        },
+                        onCardClick = { selectedPackageForDetails = if (selectedPackageForDetails?.id == pkg.id) null else pkg },
                         onStartPracticeClick = { onStartPractice(pkg.id) },
                         isExpanded = selectedPackageForDetails?.id == pkg.id
                     )
@@ -155,47 +91,18 @@ fun HomeScreen(
                 if (!uiState.premiumStatus.isPremium) {
                     item {
                         Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                            ),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
                             shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .clickable { onNavigateToPremium() }
-                                .testTag("premium_promo_card")
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { onNavigateToPremium() }.testTag("premium_promo_card")
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.size(32.dp)
-                                )
+                            Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(32.dp))
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = LocaleUtils.getString(context, R.string.premium_title, languageCode),
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                    Text(
-                                        text = LocaleUtils.getString(context, R.string.premium_subtitle, languageCode),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
-                                    )
+                                    Text(text = LocaleUtils.getString(context, R.string.premium_title, languageCode), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                    Text(text = LocaleUtils.getString(context, R.string.premium_subtitle, languageCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f))
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
+                                Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
                             }
                         }
                     }
@@ -217,33 +124,20 @@ fun PackageCard(
     isExpanded: Boolean
 ) {
     val context = LocalContext.current
-
     val totalFiles = audioPackage.files.size
-    val downloadedFilesCount = audioPackage.files.count { file ->
-        file.isDownloaded || downloadStatuses[file.id] is DownloadStatus.Success
-    }
+    val downloadedFilesCount = audioPackage.files.count { file -> file.isDownloaded || downloadStatuses[file.id] is DownloadStatus.Success }
     val allDownloaded = downloadedFilesCount == totalFiles
-    val hasDownloadError = audioPackage.files.any { file ->
-        downloadStatuses[file.id] is DownloadStatus.Error
-    }
+    val hasDownloadError = audioPackage.files.any { file -> downloadStatuses[file.id] is DownloadStatus.Error }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = !isLocked) { onCardClick() }
-            .testTag("package_card_${audioPackage.id}"),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isExpanded) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-        ),
+        modifier = Modifier.fillMaxWidth().clickable(enabled = !isLocked) { onCardClick() }.testTag("package_card_${audioPackage.id}"),
+        colors = CardDefaults.cardColors(containerColor = if (isExpanded) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Surface(
                     color = when {
                         isLocked -> MaterialTheme.colorScheme.errorContainer
@@ -260,7 +154,7 @@ fun PackageCard(
                                 isLocked -> Icons.Default.Lock
                                 allDownloaded -> Icons.Default.CheckCircle
                                 hasDownloadError -> Icons.Default.Warning
-                                else -> Icons.Default.Download
+                                else -> Icons.Default.Refresh
                             },
                             contentDescription = null,
                             tint = when {
@@ -273,16 +167,9 @@ fun PackageCard(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.width(16.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = audioPackage.name,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text(text = audioPackage.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     Text(
                         text = when {
                             isLocked -> LocaleUtils.getString(context, R.string.premium_locked, languageCode)
@@ -300,54 +187,25 @@ fun PackageCard(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Expand/Collapse"
-                )
+                Icon(imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = "Expand/Collapse")
             }
 
             AnimatedVisibility(visible = isExpanded) {
-                Column(
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        text = audioPackage.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                Column(modifier = Modifier.padding(top = 16.dp).fillMaxWidth()) {
+                    Text(text = audioPackage.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 16.dp))
 
                     if (isLocked) {
-                        Text(
-                            text = LocaleUtils.getString(context, R.string.premium_locked_desc, languageCode),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Text(text = LocaleUtils.getString(context, R.string.premium_locked_desc, languageCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 8.dp))
                     } else {
-                        Text(
-                            text = LocaleUtils.getString(context, R.string.package_contents_label, languageCode),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Text(text = LocaleUtils.getString(context, R.string.package_contents_label, languageCode), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                         
                         audioPackage.files.forEach { file ->
                             val fileDownloadStatus = downloadStatuses[file.id]
                             val isFileDownloaded = file.isDownloaded || fileDownloadStatus is DownloadStatus.Success
                             val isFileDownloading = fileDownloadStatus is DownloadStatus.Progress
                             val isFileError = fileDownloadStatus is DownloadStatus.Error
-                            
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = when {
                                         isFileDownloaded -> Icons.Default.CheckCircle
@@ -363,53 +221,27 @@ fun PackageCard(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = file.text,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Text(text = file.text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                                 
                                 if (isFileDownloading) {
-                                    CircularProgressIndicator(
-                                        progress = { (fileDownloadStatus as DownloadStatus.Progress).percentage / 100f },
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp
-                                    )
+                                    CircularProgressIndicator(progress = { (fileDownloadStatus as DownloadStatus.Progress).percentage / 100f }, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                                 } else if (isFileError) {
-                                    IconButton(
-                                        onClick = { onDownloadClick(file) },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = LocaleUtils.getString(context, R.string.retry_download_button, languageCode),
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                    IconButton(onClick = { onDownloadClick(file) }, modifier = Modifier.size(24.dp)) {
+                                        Icon(imageVector = Icons.Default.Refresh, contentDescription = LocaleUtils.getString(context, R.string.retry_download_button, languageCode), modifier = Modifier.size(16.dp))
                                     }
                                 } else if (!isFileDownloaded) {
-                                    IconButton(
-                                        onClick = { onDownloadClick(file) },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Download,
-                                            contentDescription = LocaleUtils.getString(context, R.string.download_button, languageCode),
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                    IconButton(onClick = { onDownloadClick(file) }, modifier = Modifier.size(24.dp)) {
+                                        Icon(imageVector = Icons.Default.Refresh, contentDescription = LocaleUtils.getString(context, R.string.download_button, languageCode), modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-
                         Button(
                             onClick = onStartPracticeClick,
                             enabled = allDownloaded && !hasDownloadError,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("start_practice_btn"),
+                            modifier = Modifier.fillMaxWidth().testTag("start_practice_btn"),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
