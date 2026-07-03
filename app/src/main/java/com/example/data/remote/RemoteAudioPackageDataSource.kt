@@ -43,13 +43,19 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                                             val audioUrl = "https://raw.githubusercontent.com/$repo/$branch/$path"
                                             val fid = path.replace("/", "_").replace(".", "_")
                                             val ap = if (pathPrefix.isNotEmpty()) "audio/$pathPrefix/$fn" else null
-                                            filesList.add(AudioFile(id = fid, text = name, audioUrl = audioUrl, assetPath = ap, packageName = "pkg_github_$pathPrefix"))
+                                            filesList.add(AudioFile(id = fid, text = name, audioUrl = audioUrl, assetPath = ap, packageName = "pkg_github"))
                                         }
                                     }
                                 }
                             }
                             if (filesList.isNotEmpty()) {
-                                return listOf(AudioPackage(id = "pkg_github_$pathPrefix", name = "\u067e\u06a9\u06cc\u062c \u062a\u0645\u0631\u06cc\u0646\u06cc $pathPrefix", description = "${filesList.size} \u0641\u0627\u06cc\u0644 \u0635\u0648\u062a\u06cc \u0627\u0632 \u067e\u0648\u0634\u0647 $pathPrefix", files = filesList, isPremiumOnly = false))
+                                return listOf(AudioPackage(
+                                    id = "pkg_github",
+                                    name = "تمارین روزانه",
+                                    description = "${filesList.size} فایل صوتی",
+                                    files = filesList,
+                                    isPremiumOnly = false
+                                ))
                             }
                         }
                     }
@@ -60,28 +66,23 @@ class RemoteAudioPackageDataSource(private val context: Context) {
     }
 
     fun getHardcodedPackages(): List<AudioPackage> {
+        val dailyFiles = (1..10).map { i ->
+            AudioFile(
+                id = "q_daily_$i",
+                text = "",
+                audioUrl = "$githubBaseUrl/daily/speech-$i.wav",
+                assetPath = "audio/daily/speech-$i.wav",
+                packageName = "pkg_daily"
+            )
+        }
         return listOf(
-            AudioPackage(id = "pkg_conversational_english", name = "Daily Conversational English", description = "Master everyday conversation.", files = listOf(
-                AudioFile(id = "q_weekend_plans", text = "What are your plans for this upcoming weekend?", audioUrl = "$githubBaseUrl/daily/speech-1.wav", assetPath = "audio/daily/speech-1.wav", packageName = "pkg_conversational_english"),
-                AudioFile(id = "q_favorite_hobby", text = "Tell me about your favorite hobby.", audioUrl = "$githubBaseUrl/daily/speech-2.wav", assetPath = "audio/daily/speech-2.wav", packageName = "pkg_conversational_english"),
-                AudioFile(id = "q_perfect_day", text = "Describe your perfect day.", audioUrl = "$githubBaseUrl/daily/speech-3.wav", assetPath = "audio/daily/speech-3.wav", packageName = "pkg_conversational_english"),
-                AudioFile(id = "q_weather_mood", text = "How does weather affect your mood?", audioUrl = "$githubBaseUrl/daily/speech-4.wav", assetPath = "audio/daily/speech-4.wav", packageName = "pkg_conversational_english"),
-                AudioFile(id = "q_recommend_book", text = "Recommend a book or movie.", audioUrl = "$githubBaseUrl/daily/speech-5.wav", assetPath = "audio/daily/speech-5.wav", packageName = "pkg_conversational_english")
-            ), isPremiumOnly = false),
-            AudioPackage(id = "pkg_ielts_speaking", name = "IELTS Speaking Mastery", description = "Perfect IELTS Part 1 answers.", files = listOf(
-                AudioFile(id = "q_ielts_hometown", text = "Tell us about your hometown.", audioUrl = "$githubBaseUrl/ielts/speech-1.wav", assetPath = "audio/ielts/speech-1.wav", packageName = "pkg_ielts_speaking"),
-                AudioFile(id = "q_ielts_work_study", text = "Do you work or study?", audioUrl = "$githubBaseUrl/ielts/speech-2.wav", assetPath = "audio/ielts/speech-2.wav", packageName = "pkg_ielts_speaking"),
-                AudioFile(id = "q_ielts_technology", text = "How often do you use technology?", audioUrl = "$githubBaseUrl/ielts/speech-3.wav", assetPath = "audio/ielts/speech-3.wav", packageName = "pkg_ielts_speaking"),
-                AudioFile(id = "q_ielts_transport", text = "What is public transport like?", audioUrl = "$githubBaseUrl/ielts/speech-4.wav", assetPath = "audio/ielts/speech-4.wav", packageName = "pkg_ielts_speaking"),
-                AudioFile(id = "q_ielts_plans", text = "What are your future plans?", audioUrl = "$githubBaseUrl/ielts/speech-5.wav", assetPath = "audio/ielts/speech-5.wav", packageName = "pkg_ielts_speaking")
-            ), isPremiumOnly = false),
-            AudioPackage(id = "pkg_job_interview", name = "Job Interview Confidence", description = "Practice behavioral questions.", files = listOf(
-                AudioFile(id = "q_interview_introduce", text = "Introduce yourself.", audioUrl = "$githubBaseUrl/interview/speech-1.wav", assetPath = "audio/interview/speech-1.wav", packageName = "pkg_job_interview"),
-                AudioFile(id = "q_interview_strength", text = "What is your greatest strength?", audioUrl = "$githubBaseUrl/interview/speech-2.wav", assetPath = "audio/interview/speech-2.wav", packageName = "pkg_job_interview"),
-                AudioFile(id = "q_interview_conflict", text = "Describe a conflict and how you resolved it.", audioUrl = "$githubBaseUrl/interview/speech-3.wav", assetPath = "audio/interview/speech-3.wav", packageName = "pkg_job_interview"),
-                AudioFile(id = "q_interview_pressure", text = "How do you handle pressure?", audioUrl = "$githubBaseUrl/interview/speech-4.wav", assetPath = "audio/interview/speech-4.wav", packageName = "pkg_job_interview"),
-                AudioFile(id = "q_interview_failure", text = "Tell me about a failure.", audioUrl = "$githubBaseUrl/interview/speech-5.wav", assetPath = "audio/interview/speech-5.wav", packageName = "pkg_job_interview")
-            ), isPremiumOnly = true)
+            AudioPackage(
+                id = "pkg_daily",
+                name = "تمارین روزانه",
+                description = "${dailyFiles.size} فایل صوتی برای تمرین روزانه",
+                files = dailyFiles,
+                isPremiumOnly = false
+            )
         )
     }
 

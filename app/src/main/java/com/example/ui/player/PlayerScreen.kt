@@ -75,48 +75,40 @@ fun PlayerScreen(
 
                 is SessionState.PlayingAudio -> {
                     val currentIndex = sessionState.currentQuestionIndex
-                    val currentQuestion = uiState.questions.getOrNull(currentIndex)
                     
-                    if (currentQuestion != null) {
-                        PracticeActiveContent(
-                            title = uiState.currentPackage?.name ?: "",
-                            questionText = currentQuestion.text,
-                            currentIndex = currentIndex,
-                            totalQuestions = uiState.questions.size,
-                            isPlayingMode = true,
-                            isPaused = uiState.isPaused,
-                            pauseRemainingSeconds = 0,
-                            maxPauseSeconds = uiState.settings.pauseDurationSeconds,
-                            languageCode = languageCode,
-                            onPauseClick = { viewModel.pauseSession() },
-                            onResumeClick = { viewModel.resumeSession() },
-                            onSkipClick = { viewModel.skipCurrent() },
-                            onFinishClick = { viewModel.finishSession() }
-                        )
-                    }
+                    PracticeActiveContent(
+                        title = uiState.currentPackage?.name ?: "",
+                        currentIndex = currentIndex,
+                        totalQuestions = uiState.questions.size,
+                        isPlayingMode = true,
+                        isPaused = uiState.isPaused,
+                        pauseRemainingSeconds = 0,
+                        maxPauseSeconds = uiState.settings.pauseDurationSeconds,
+                        languageCode = languageCode,
+                        onPauseClick = { viewModel.pauseSession() },
+                        onResumeClick = { viewModel.resumeSession() },
+                        onSkipClick = { viewModel.skipCurrent() },
+                        onFinishClick = { viewModel.finishSession() }
+                    )
                 }
 
                 is SessionState.PracticingPause -> {
                     val currentIndex = sessionState.currentQuestionIndex
-                    val currentQuestion = uiState.questions.getOrNull(currentIndex)
                     
-                    if (currentQuestion != null) {
-                        PracticeActiveContent(
-                            title = uiState.currentPackage?.name ?: "",
-                            questionText = currentQuestion.text,
-                            currentIndex = currentIndex,
-                            totalQuestions = uiState.questions.size,
-                            isPlayingMode = false,
-                            isPaused = uiState.isPaused,
-                            pauseRemainingSeconds = sessionState.secondsRemaining,
-                            maxPauseSeconds = uiState.settings.pauseDurationSeconds,
-                            languageCode = languageCode,
-                            onPauseClick = { viewModel.pauseSession() },
-                            onResumeClick = { viewModel.resumeSession() },
-                            onSkipClick = { viewModel.skipCurrent() },
-                            onFinishClick = { viewModel.finishSession() }
-                        )
-                    }
+                    PracticeActiveContent(
+                        title = uiState.currentPackage?.name ?: "",
+                        currentIndex = currentIndex,
+                        totalQuestions = uiState.questions.size,
+                        isPlayingMode = false,
+                        isPaused = uiState.isPaused,
+                        pauseRemainingSeconds = sessionState.secondsRemaining,
+                        maxPauseSeconds = uiState.settings.pauseDurationSeconds,
+                        languageCode = languageCode,
+                        onPauseClick = { viewModel.pauseSession() },
+                        onResumeClick = { viewModel.resumeSession() },
+                        onSkipClick = { viewModel.skipCurrent() },
+                        onFinishClick = { viewModel.finishSession() }
+                    )
                 }
 
                 is SessionState.Completed -> {
@@ -167,7 +159,6 @@ fun AnimatedWaveform(modifier: Modifier = Modifier) {
 
 @Composable
 fun QuestionCard(
-    questionText: String,
     isPlayingMode: Boolean,
     pauseRemainingSeconds: Int,
     maxPauseSeconds: Int,
@@ -211,21 +202,6 @@ fun QuestionCard(
             // Waveform (for visual excitement)
             AnimatedWaveform(
                 modifier = Modifier.padding(bottom = 24.dp)
-            )
-            
-            // Question text
-            Text(
-                text = "\"$questionText\"",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Light,
-                    lineHeight = 34.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
             )
             
             Spacer(modifier = Modifier.height(28.dp))
@@ -306,7 +282,6 @@ fun QuestionCard(
 @Composable
 fun PracticeActiveContent(
     title: String,
-    questionText: String,
     currentIndex: Int,
     totalQuestions: Int,
     isPlayingMode: Boolean,
@@ -369,7 +344,6 @@ fun PracticeActiveContent(
             contentAlignment = Alignment.Center
         ) {
             QuestionCard(
-                questionText = questionText,
                 isPlayingMode = isPlayingMode,
                 pauseRemainingSeconds = pauseRemainingSeconds,
                 maxPauseSeconds = maxPauseSeconds,
@@ -498,32 +472,18 @@ fun SessionCompletedCard(
 
             Text(
                 text = packageName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = LocaleUtils.getString(context, R.string.session_completed_desc, languageCode),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = onBackToHome,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("back_to_home_btn")
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(text = LocaleUtils.getString(context, R.string.back_to_home, languageCode))
+                Text(LocaleUtils.getString(context, R.string.back_to_home, languageCode))
             }
         }
     }
