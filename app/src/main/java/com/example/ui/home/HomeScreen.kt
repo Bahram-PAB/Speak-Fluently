@@ -152,7 +152,6 @@ fun HomeScreen(
                     )
                 }
 
-                // Add premium unlock call-out if not premium
                 if (!uiState.premiumStatus.isPremium) {
                     item {
                         Card(
@@ -219,18 +218,19 @@ fun PackageCard(
 ) {
     val context = LocalContext.current
 
-    // Determine download state of package files
     val totalFiles = audioPackage.files.size
     val downloadedFilesCount = audioPackage.files.count { file ->
-        val state = downloadStatuses[file.id]
-        file.isDownloaded || state is DownloadStatus.Success
+        file.isDownloaded || downloadStatuses[file.id] is DownloadStatus.Success
     }
     val allDownloaded = downloadedFilesCount == totalFiles
+    val hasDownloadError = audioPackage.files.any { file ->
+        downloadStatuses[file.id] is DownloadStatus.Error
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCardClick() }
+            .clickable(enabled = !isLocked) { onCardClick() }
             .testTag("package_card_${audioPackage.id}"),
         colors = CardDefaults.cardColors(
             containerColor = if (isExpanded) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
@@ -244,17 +244,31 @@ fun PackageCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Leading Icon/Badge
                 Surface(
-                    color = if (isLocked) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                    color = when {
+                        isLocked -> MaterialTheme.colorScheme.errorContainer
+                        allDownloaded -> MaterialTheme.colorScheme.primaryContainer
+                        hasDownloadError -> MaterialTheme.colorScheme.tertiaryContainer
+                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.PlayArrow,
+                            imageVector = when {
+                                isLocked -> Icons.Default.Lock
+                                allDownloaded -> Icons.Default.CheckCircle
+                                hasDownloadError -> Icons.Default.Warning
+                                else -> Icons.Default.Download
+                            },
                             contentDescription = null,
-                            tint = if (isLocked) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = when {
+                                isLocked -> MaterialTheme.colorScheme.onErrorContainer
+                                allDownloaded -> MaterialTheme.colorScheme.onPrimaryContainer
+                                hasDownloadError -> MaterialTheme.colorScheme.onTertiaryContainer
+                                else -> MaterialTheme.colorScheme.onSecondaryContainer
+                            },
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -270,20 +284,18 @@ fun PackageCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isLocked) {
-                            LocaleUtils.getString(context, R.string.premium_locked, languageCode)
-                        } else if (allDownloaded) {
-                            LocaleUtils.getString(context, R.string.download_ready, languageCode)
-                        } else {
-                            "${LocaleUtils.getString(context, R.string.download_required, languageCode)} ($downloadedFilesCount/$totalFiles)"
+                        text = when {
+                            isLocked -> LocaleUtils.getString(context, R.string.premium_locked, languageCode)
+                            allDownloaded -> LocaleUtils.getString(context, R.string.download_ready, languageCode)
+                            hasDownloadError -> LocaleUtils.getString(context, R.string.download_error_label, languageCode)
+                            else -> "${LocaleUtils.getString(context, R.string.download_required, languageCode)} ($downloadedFilesCount/$totalFiles)"
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isLocked) {
-                            MaterialTheme.colorScheme.error
-                        } else if (allDownloaded) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outline
+                        color = when {
+                            isLocked -> MaterialTheme.colorScheme.error
+                            allDownloaded -> MaterialTheme.colorScheme.primary
+                            hasDownloadError -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.outline
                         },
                         fontWeight = FontWeight.SemiBold
                     )
@@ -317,17 +329,18 @@ fun PackageCard(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     } else {
-                        // File downloads checklist
                         Text(
-                            text = "Package Contents:",
+                            text = LocaleUtils.getString(context, R.string.package_contents_label, languageCode),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         
                         audioPackage.files.forEach { file ->
-                            val fileState = downloadStatuses[file.id]
-                            val isFileDownloaded = file.isDownloaded || fileState is DownloadStatus.Success
+                            val fileDownloadStatus = downloadStatuses[file.id]
+                            val isFileDownloaded = file.isDownloaded || fileDownloadStatus is DownloadStatus.Success
+                            val isFileDownloading = fileDownloadStatus is DownloadStatus.Progress
+                            val isFileError = fileDownloadStatus is DownloadStatus.Error
                             
                             Row(
                                 modifier = Modifier
@@ -336,9 +349,17 @@ fun PackageCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = if (isFileDownloaded) Icons.Default.CheckCircle else Icons.Default.Info,
+                                    imageVector = when {
+                                        isFileDownloaded -> Icons.Default.CheckCircle
+                                        isFileError -> Icons.Default.Warning
+                                        else -> Icons.Default.Info
+                                    },
                                     contentDescription = null,
-                                    tint = if (isFileDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                    tint = when {
+                                        isFileDownloaded -> MaterialTheme.colorScheme.primary
+                                        isFileError -> MaterialTheme.colorScheme.error
+                                        else -> MaterialTheme.colorScheme.outline
+                                    },
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -349,24 +370,33 @@ fun PackageCard(
                                     modifier = Modifier.weight(1f)
                                 )
                                 
-                                if (!isFileDownloaded) {
-                                    if (fileState is DownloadStatus.Progress) {
-                                        CircularProgressIndicator(
-                                            progress = { fileState.percentage / 100f },
-                                            modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.dp
+                                if (isFileDownloading) {
+                                    CircularProgressIndicator(
+                                        progress = { (fileDownloadStatus as DownloadStatus.Progress).percentage / 100f },
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else if (isFileError) {
+                                    IconButton(
+                                        onClick = { onDownloadClick(file) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = LocaleUtils.getString(context, R.string.retry_download_button, languageCode),
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                    } else {
-                                        IconButton(
-                                            onClick = { onDownloadClick(file) },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Refresh,
-                                                contentDescription = "Download",
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
+                                    }
+                                } else if (!isFileDownloaded) {
+                                    IconButton(
+                                        onClick = { onDownloadClick(file) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = LocaleUtils.getString(context, R.string.download_button, languageCode),
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     }
                                 }
                             }
@@ -376,6 +406,7 @@ fun PackageCard(
 
                         Button(
                             onClick = onStartPracticeClick,
+                            enabled = allDownloaded && !hasDownloadError,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("start_practice_btn"),
