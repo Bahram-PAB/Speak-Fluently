@@ -12,24 +12,15 @@ import java.io.IOException
 class RemoteAudioPackageDataSource(private val context: Context) {
 
     private val client = OkHttpClient()
-
-    // Default configuration for GitHub raw URL hosted speech files
     private val githubBaseUrl = "https://raw.githubusercontent.com/username/speakfluently-audio/main/packages"
 
     fun getRemotePackagesMetadata(repo: String = "", branch: String = "", pathPrefix: String = ""): List<AudioPackage> {
         val defaultList = getHardcodedPackages()
-        if (repo.isEmpty() || branch.isEmpty()) {
-            return defaultList
-        }
+        if (repo.isEmpty() || branch.isEmpty()) return defaultList
 
-        // 1. Try to fetch recursively all audio files using Git Trees API
         try {
             val treeUrl = "https://api.github.com/repos/$repo/git/trees/$branch?recursive=1"
-            val request = Request.Builder()
-                .url(treeUrl)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .build()
-            
+            val request = Request.Builder().url(treeUrl).header("User-Agent", "Mozilla/5.0").build()
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val bodyString = response.body?.string() ?: ""
@@ -40,431 +31,68 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                             val filesList = mutableListOf<AudioFile>()
                             for (i in 0 until treeArray.length()) {
                                 val item = treeArray.getJSONObject(i)
-                                val type = item.optString("type", "")
-                                if (type == "blob") { // blob means file
+                                if (item.optString("type", "") == "blob") {
                                     val path = item.optString("path", "")
-                                    val lowercasePath = path.lowercase()
-                                    // filter for audio files
-                                    if (lowercasePath.endsWith(".wav") || 
-                                        lowercasePath.endsWith(".mp3") || 
-                                        lowercasePath.endsWith(".m4a") || 
-                                        lowercasePath.endsWith(".ogg") || 
-                                        lowercasePath.endsWith(".aac") || 
-                                        lowercasePath.endsWith(".flac")) {
-                                        
-                                        // Filter by prefix if specified by user
-                                        if (pathPrefix.isEmpty() || path.startsWith(pathPrefix)) {
-                                            val fileName = path.substringAfterLast("/")
-                                            val nameWithoutExt = fileName.substringBeforeLast(".")
-                                            val text = nameWithoutExt.replace("_", " ")
-                                                .replace("-", " ")
-                                                .trim()
-                                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                                            
+                                    val lp = path.lowercase()
+                                    if (lp.endsWith(".wav") || lp.endsWith(".mp3") || lp.endsWith(".m4a") || lp.endsWith(".ogg")) {
+                                        val segs = path.split("/")
+                                        val matches = if (pathPrefix.isEmpty()) true else (segs.size == 2 && segs[0] == pathPrefix)
+                                        if (matches) {
+                                            val fn = segs.last()
+                                            val name = fn.substringBeforeLast(".").replace("_", " ").replace("-", " ").trim()
                                             val audioUrl = "https://raw.githubusercontent.com/$repo/$branch/$path"
-                                            val fileId = path.replace("/", "_").replace(".", "_")
-                                            
-                                            filesList.add(
-                                                AudioFile(
-                                                    id = fileId,
-                                                    text = text,
-                                                    audioUrl = audioUrl,
-                                                    packageName = "pkg_github_files",
-                                                    localPath = null
-                                                )
-                                            )
+                                            val fid = path.replace("/", "_").replace(".", "_")
+                                            val ap = if (pathPrefix.isNotEmpty()) "audio/$pathPrefix/$fn" else null
+                                            filesList.add(AudioFile(id = fid, text = name, audioUrl = audioUrl, assetPath = ap, packageName = "pkg_github_$pathPrefix"))
                                         }
                                     }
                                 }
                             }
                             if (filesList.isNotEmpty()) {
-                                val packagesList = mutableListOf<AudioPackage>()
-                                val chunked = filesList.chunked(5)
-                                chunked.forEachIndexed { index, chunk ->
-                                    val pkgId = "pkg_github_part_${index + 1}"
-                                    val updatedChunk = chunk.map { it.copy(packageName = pkgId) }
-                                    packagesList.add(
-                                        AudioPackage(
-                                            id = pkgId,
-                                            name = "پکیج تمرینی شماره ${index + 1}",
-                                            description = "این پکیج شامل ${updatedChunk.size} فایل صوتی تمرینی دانلود شده از مخزن شماست.",
-                                            files = updatedChunk,
-                                            isPremiumOnly = false
-                                        )
-                                    )
-                                }
-                                return packagesList
+                                return listOf(AudioPackage(id = "pkg_github_$pathPrefix", name = "\u067e\u06a9\u06cc\u062c \u062a\u0645\u0631\u06cc\u0646\u06cc $pathPrefix", description = "${filesList.size} \u0641\u0627\u06cc\u0644 \u0635\u0648\u062a\u06cc \u0627\u0632 \u067e\u0648\u0634\u0647 $pathPrefix", files = filesList, isPremiumOnly = false))
                             }
                         }
                     }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        val baseUrl = if (pathPrefix.isNotEmpty()) {
-            "https://raw.githubusercontent.com/$repo/$branch/$pathPrefix"
-        } else {
-            "https://raw.githubusercontent.com/$repo/$branch"
-        }
-
-        // Try to fetch custom packages.json or metadata.json from GitHub
-        val jsonUrls = listOf(
-            "$baseUrl/packages.json",
-            "https://raw.githubusercontent.com/$repo/$branch/packages.json",
-            "$baseUrl/metadata.json",
-            "https://raw.githubusercontent.com/$repo/$branch/metadata.json"
-        )
-
-        for (url in jsonUrls) {
-            try {
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                    .build()
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        val bodyString = response.body?.string() ?: ""
-                        if (bodyString.isNotEmpty()) {
-                            val parsed = parseJsonPackages(bodyString, baseUrl)
-                            if (parsed.isNotEmpty()) {
-                                return parsed
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // Try next URL
-            }
-        }
-
-        // If no remote JSON metadata is found, use the hardcoded ones
+        } catch (e: Exception) { e.printStackTrace() }
         return defaultList
     }
 
-    private fun parseJsonPackages(jsonStr: String, baseUrl: String): List<AudioPackage> {
-        val list = mutableListOf<AudioPackage>()
-        try {
-            val trimmed = jsonStr.trim()
-            if (trimmed.startsWith("[")) {
-                val array = org.json.JSONArray(trimmed)
-                for (i in 0 until array.length()) {
-                    val pkgObj = array.getJSONObject(i)
-                    list.add(parseSinglePackage(pkgObj, baseUrl))
-                }
-            } else if (trimmed.startsWith("{")) {
-                val obj = org.json.JSONObject(trimmed)
-                if (obj.has("packages")) {
-                    val array = obj.getJSONArray("packages")
-                    for (i in 0 until array.length()) {
-                        list.add(parseSinglePackage(array.getJSONObject(i), baseUrl))
-                    }
-                } else {
-                    list.add(parseSinglePackage(obj, baseUrl))
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return list
-    }
-
-    private fun parseSinglePackage(obj: org.json.JSONObject, baseUrl: String): AudioPackage {
-        val id = obj.optString("id", java.util.UUID.randomUUID().toString())
-        val name = obj.optString("name", "Custom Package")
-        val description = obj.optString("description", "")
-        val isPremiumOnly = obj.optBoolean("isPremiumOnly", false)
-        
-        val filesList = mutableListOf<AudioFile>()
-        val filesArray = obj.optJSONArray("files")
-        if (filesArray != null) {
-            for (j in 0 until filesArray.length()) {
-                try {
-                    val fileObj = filesArray.getJSONObject(j)
-                    val fileId = fileObj.optString("id", java.util.UUID.randomUUID().toString())
-                    val text = fileObj.optString("text", "Practice Question")
-                    var audioUrl = fileObj.optString("audioUrl", "")
-                    
-                    // If the audioUrl is relative (does not start with http/https), prepend the baseUrl
-                    if (audioUrl.isNotEmpty() && !audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
-                        audioUrl = if (baseUrl.endsWith("/") || audioUrl.startsWith("/")) {
-                            "$baseUrl$audioUrl"
-                        } else {
-                            "$baseUrl/$audioUrl"
-                        }
-                    }
-                    
-                    filesList.add(
-                        AudioFile(
-                            id = fileId,
-                            text = text,
-                            audioUrl = audioUrl,
-                            packageName = id
-                        )
-                    )
-                } catch (ignored: Exception) {
-                    // Prevent single file parse error from breaking the entire package list
-                }
-            }
-        }
-
-        // Extremely robust fallback: if files list is empty, generate standard files or fallback to hardcoded ones
-        if (filesList.isEmpty()) {
-            val defaultPkg = getHardcodedPackages().find { it.id == id }
-            if (defaultPkg != null) {
-                filesList.addAll(defaultPkg.files)
-            } else {
-                val folderName = when (id) {
-                    "pkg_conversational_english" -> "daily"
-                    "pkg_ielts_speaking" -> "ielts"
-                    "pkg_job_interview" -> "interview"
-                    else -> id.replace("pkg_", "")
-                }
-                val titles = listOf(
-                    "First question practice",
-                    "Second question practice",
-                    "Third question practice",
-                    "Fourth question practice",
-                    "Fifth question practice"
-                )
-                for (i in 1..5) {
-                    filesList.add(
-                        AudioFile(
-                            id = "q_${id}_$i",
-                            text = titles[i - 1],
-                            audioUrl = if (baseUrl.endsWith("/")) "$baseUrl$folderName/speech-$i.wav" else "$baseUrl/$folderName/speech-$i.wav",
-                            packageName = id
-                        )
-                    )
-                }
-            }
-        }
-        
-        return AudioPackage(
-            id = id,
-            name = name,
-            description = description,
-            files = filesList,
-            isPremiumOnly = isPremiumOnly
-        )
-    }
-
     fun getHardcodedPackages(): List<AudioPackage> {
-        // High quality educational Packages
         return listOf(
-            AudioPackage(
-                id = "pkg_conversational_english",
-                name = "Daily Conversational English",
-                description = "Master everyday conversation starters, leisure talk, and friendly dialogues.",
-                files = listOf(
-                    AudioFile(
-                        id = "q_weekend_plans",
-                        text = "What are your plans for this upcoming weekend?",
-                        audioUrl = "$githubBaseUrl/daily/speech-1.wav",
-                        packageName = "pkg_conversational_english"
-                    ),
-                    AudioFile(
-                        id = "q_favorite_hobby",
-                        text = "Tell me about your favorite hobby and why you enjoy it.",
-                        audioUrl = "$githubBaseUrl/daily/speech-2.wav",
-                        packageName = "pkg_conversational_english"
-                    ),
-                    AudioFile(
-                        id = "q_perfect_day",
-                        text = "Describe your perfect day from morning until night.",
-                        audioUrl = "$githubBaseUrl/daily/speech-3.wav",
-                        packageName = "pkg_conversational_english"
-                    ),
-                    AudioFile(
-                        id = "q_weather_mood",
-                        text = "How does the weather affect your daily mood?",
-                        audioUrl = "$githubBaseUrl/daily/speech-4.wav",
-                        packageName = "pkg_conversational_english"
-                    ),
-                    AudioFile(
-                        id = "q_recommend_book",
-                        text = "If you could recommend one book or movie, what would it be?",
-                        audioUrl = "$githubBaseUrl/daily/speech-5.wav",
-                        packageName = "pkg_conversational_english"
-                    )
-                ),
-                isPremiumOnly = false
-            ),
-            AudioPackage(
-                id = "pkg_ielts_speaking",
-                name = "IELTS Speaking Mastery (Part 1)",
-                description = "Perfect your answers for IELTS Part 1 topics under realistic timed conditions.",
-                files = listOf(
-                    AudioFile(
-                        id = "q_ielts_hometown",
-                        text = "Let's talk about your hometown. Where is it located, and what is it famous for?",
-                        audioUrl = "$githubBaseUrl/ielts/speech-1.wav",
-                        packageName = "pkg_ielts_speaking"
-                    ),
-                    AudioFile(
-                        id = "q_ielts_work_study",
-                        text = "Do you work, or are you a student? What do you like most about it?",
-                        audioUrl = "$githubBaseUrl/ielts/speech-2.wav",
-                        packageName = "pkg_ielts_speaking"
-                    ),
-                    AudioFile(
-                        id = "q_ielts_technology",
-                        text = "How often do you use technology in your studies or daily work?",
-                        audioUrl = "$githubBaseUrl/ielts/speech-3.wav",
-                        packageName = "pkg_ielts_speaking"
-                    ),
-                    AudioFile(
-                        id = "q_ielts_public_transport",
-                        text = "What is the public transport system like in your city?",
-                        audioUrl = "$githubBaseUrl/ielts/speech-4.wav",
-                        packageName = "pkg_ielts_speaking"
-                    ),
-                    AudioFile(
-                        id = "q_ielts_future_plans",
-                        text = "What are your career plans or academic goals for the next five years?",
-                        audioUrl = "$githubBaseUrl/ielts/speech-5.wav",
-                        packageName = "pkg_ielts_speaking"
-                    )
-                ),
-                isPremiumOnly = false
-            ),
-            AudioPackage(
-                id = "pkg_job_interview",
-                name = "Job Interview Confidence",
-                description = "Practice answering behavioral interview questions using the STAR technique.",
-                files = listOf(
-                    AudioFile(
-                        id = "q_interview_introduce",
-                        text = "Please introduce yourself and explain why you are interested in this position.",
-                        audioUrl = "$githubBaseUrl/interview/speech-1.wav",
-                        packageName = "pkg_job_interview"
-                    ),
-                    AudioFile(
-                        id = "q_interview_strength",
-                        text = "What do you consider your greatest professional strength?",
-                        audioUrl = "$githubBaseUrl/interview/speech-2.wav",
-                        packageName = "pkg_job_interview"
-                    ),
-                    AudioFile(
-                        id = "q_interview_conflict",
-                        text = "Describe a situation where you had a conflict at work and how you resolved it.",
-                        audioUrl = "$githubBaseUrl/interview/speech-3.wav",
-                        packageName = "pkg_job_interview"
-                    ),
-                    AudioFile(
-                        id = "q_interview_pressure",
-                        text = "How do you prioritize your tasks and manage tight deadlines under pressure?",
-                        audioUrl = "$githubBaseUrl/interview/speech-4.wav",
-                        packageName = "pkg_job_interview"
-                    ),
-                    AudioFile(
-                        id = "q_interview_failure",
-                        text = "Tell me about a time you failed or made a mistake. What did you learn?",
-                        audioUrl = "$githubBaseUrl/interview/speech-5.wav",
-                        packageName = "pkg_job_interview"
-                    )
-                ),
-                isPremiumOnly = true // Locked behind premium activation
-            )
+            AudioPackage(id = "pkg_conversational_english", name = "Daily Conversational English", description = "Master everyday conversation.", files = listOf(
+                AudioFile(id = "q_weekend_plans", text = "What are your plans for this upcoming weekend?", audioUrl = "$githubBaseUrl/daily/speech-1.wav", assetPath = "audio/daily/speech-1.wav", packageName = "pkg_conversational_english"),
+                AudioFile(id = "q_favorite_hobby", text = "Tell me about your favorite hobby.", audioUrl = "$githubBaseUrl/daily/speech-2.wav", assetPath = "audio/daily/speech-2.wav", packageName = "pkg_conversational_english"),
+                AudioFile(id = "q_perfect_day", text = "Describe your perfect day.", audioUrl = "$githubBaseUrl/daily/speech-3.wav", assetPath = "audio/daily/speech-3.wav", packageName = "pkg_conversational_english"),
+                AudioFile(id = "q_weather_mood", text = "How does weather affect your mood?", audioUrl = "$githubBaseUrl/daily/speech-4.wav", assetPath = "audio/daily/speech-4.wav", packageName = "pkg_conversational_english"),
+                AudioFile(id = "q_recommend_book", text = "Recommend a book or movie.", audioUrl = "$githubBaseUrl/daily/speech-5.wav", assetPath = "audio/daily/speech-5.wav", packageName = "pkg_conversational_english")
+            ), isPremiumOnly = false),
+            AudioPackage(id = "pkg_ielts_speaking", name = "IELTS Speaking Mastery", description = "Perfect IELTS Part 1 answers.", files = listOf(
+                AudioFile(id = "q_ielts_hometown", text = "Tell us about your hometown.", audioUrl = "$githubBaseUrl/ielts/speech-1.wav", assetPath = "audio/ielts/speech-1.wav", packageName = "pkg_ielts_speaking"),
+                AudioFile(id = "q_ielts_work_study", text = "Do you work or study?", audioUrl = "$githubBaseUrl/ielts/speech-2.wav", assetPath = "audio/ielts/speech-2.wav", packageName = "pkg_ielts_speaking"),
+                AudioFile(id = "q_ielts_technology", text = "How often do you use technology?", audioUrl = "$githubBaseUrl/ielts/speech-3.wav", assetPath = "audio/ielts/speech-3.wav", packageName = "pkg_ielts_speaking"),
+                AudioFile(id = "q_ielts_transport", text = "What is public transport like?", audioUrl = "$githubBaseUrl/ielts/speech-4.wav", assetPath = "audio/ielts/speech-4.wav", packageName = "pkg_ielts_speaking"),
+                AudioFile(id = "q_ielts_plans", text = "What are your future plans?", audioUrl = "$githubBaseUrl/ielts/speech-5.wav", assetPath = "audio/ielts/speech-5.wav", packageName = "pkg_ielts_speaking")
+            ), isPremiumOnly = false),
+            AudioPackage(id = "pkg_job_interview", name = "Job Interview Confidence", description = "Practice behavioral questions.", files = listOf(
+                AudioFile(id = "q_interview_introduce", text = "Introduce yourself.", audioUrl = "$githubBaseUrl/interview/speech-1.wav", assetPath = "audio/interview/speech-1.wav", packageName = "pkg_job_interview"),
+                AudioFile(id = "q_interview_strength", text = "What is your greatest strength?", audioUrl = "$githubBaseUrl/interview/speech-2.wav", assetPath = "audio/interview/speech-2.wav", packageName = "pkg_job_interview"),
+                AudioFile(id = "q_interview_conflict", text = "Describe a conflict and how you resolved it.", audioUrl = "$githubBaseUrl/interview/speech-3.wav", assetPath = "audio/interview/speech-3.wav", packageName = "pkg_job_interview"),
+                AudioFile(id = "q_interview_pressure", text = "How do you handle pressure?", audioUrl = "$githubBaseUrl/interview/speech-4.wav", assetPath = "audio/interview/speech-4.wav", packageName = "pkg_job_interview"),
+                AudioFile(id = "q_interview_failure", text = "Tell me about a failure.", audioUrl = "$githubBaseUrl/interview/speech-5.wav", assetPath = "audio/interview/speech-5.wav", packageName = "pkg_job_interview")
+            ), isPremiumOnly = true)
         )
     }
 
-    /**
-     * Downloads file from url and saves to local storage.
-     * If download fails and throwOnError is false, synthesizes or creates a dummy WAV file containing the spoken text
-     * so that the application has a perfect fallback.
-     */
     @Throws(IOException::class)
-    fun downloadUrlToFile(url: String, targetFile: File, backupText: String, throwOnError: Boolean = false): File {
+    fun downloadUrlToFile(url: String, targetFile: File): File {
         val request = Request.Builder().url(url).build()
-        try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw IOException("Unsuccessful network call: $response")
-                }
-                val body = response.body ?: throw IOException("Empty response body")
-                FileOutputStream(targetFile).use { fos ->
-                    body.byteStream().use { bis ->
-                        bis.copyTo(fos)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            if (throwOnError) {
-                // Delete target file if it was created partially, so it can be retried cleanly next time
-                try {
-                    if (targetFile.exists()) {
-                        targetFile.delete()
-                    }
-                } catch (ignored: Exception) {}
-                throw e
-            }
-            // Smart Fallback System: generate a small synthetic WAV file containing standard audio beep/silence
-            // to ensure offline playback never crashes if the remote GitHub files are temporarily offline or slow.
-            if (!targetFile.exists() || targetFile.length() == 0L) {
-                generateDummyWavFile(targetFile)
-            }
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Download failed: $response")
+            val body = response.body ?: throw IOException("Empty response body")
+            FileOutputStream(targetFile).use { fos -> body.byteStream().use { bis -> bis.copyTo(fos) } }
         }
         return targetFile
-    }
-
-    /**
-     * Generates a tiny, syntactically correct standard 16-bit PCM WAV file
-     * containing a short synthesized beep/tone so the media player can play it successfully.
-     */
-    private fun generateDummyWavFile(file: File) {
-        val sampleRate = 8000
-        val seconds = 3
-        val numSamples = sampleRate * seconds
-        val subChunk2Size = numSamples * 2 // 16-bit = 2 bytes per sample
-        val chunkSize = 36 + subChunk2Size
-        
-        try {
-            FileOutputStream(file).use { out ->
-                // RIFF Header
-                out.write("RIFF".toByteArray())
-                out.write(intToByteArray(chunkSize))
-                out.write("WAVE".toByteArray())
-                
-                // Format block ("fmt ")
-                out.write("fmt ".toByteArray())
-                out.write(intToByteArray(16)) // Subchunk1Size
-                out.write(shortToByteArray(1)) // AudioFormat (1 = PCM)
-                out.write(shortToByteArray(1)) // NumChannels (1 = Mono)
-                out.write(intToByteArray(sampleRate)) // SampleRate
-                out.write(intToByteArray(sampleRate * 2)) // ByteRate
-                out.write(shortToByteArray(2)) // BlockAlign
-                out.write(shortToByteArray(16)) // BitsPerSample
-                
-                // Data block
-                out.write("data".toByteArray())
-                out.write(intToByteArray(subChunk2Size))
-                
-                // Write a simple sine wave tone
-                val frequency = 440.0 // A4 tone
-                for (i in 0 until numSamples) {
-                    val angle = 2.0 * Math.PI * frequency * i / sampleRate
-                    val sample = (Math.sin(angle) * 32767).toInt().toShort()
-                    out.write(shortToByteArray(sample.toInt()))
-                }
-            }
-        } catch (ignored: Exception) {}
-    }
-
-    private fun intToByteArray(value: Int): ByteArray {
-        return byteArrayOf(
-            (value and 0xff).toByte(),
-            ((value shr 8) and 0xff).toByte(),
-            ((value shr 16) and 0xff).toByte(),
-            ((value shr 24) and 0xff).toByte()
-        )
-    }
-
-    private fun shortToByteArray(value: Int): ByteArray {
-        return byteArrayOf(
-            (value and 0xff).toByte(),
-            ((value shr 8) and 0xff).toByte()
-        )
     }
 }
