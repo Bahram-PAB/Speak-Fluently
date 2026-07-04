@@ -42,18 +42,9 @@ fun SettingsScreen(
     var notificationsEnabled by remember(settings) { mutableStateOf(settings.notificationsEnabled) }
     var notificationTime by remember(settings) { mutableStateOf(settings.dailyNotificationTime) }
     var githubAudioRepo by remember(settings) { mutableStateOf(settings.githubAudioRepo) }
-    
+
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-
-    val languages = listOf(
-        Pair("fa", "فارسی (Persian)"),
-        Pair("en", "English"),
-        Pair("id", "Indonesian"),
-        Pair("th", "Thai"),
-        Pair("vi", "Vietnamese"),
-        Pair("ms", "Malay")
-    )
 
     Scaffold(
         topBar = {
@@ -80,7 +71,7 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 1. Language Section
+            // 1. Practice Configuration Section
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -89,55 +80,7 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = LocaleUtils.getString(context, R.string.language_section, currentLanguageCode),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        languages.forEach { (code, name) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onLanguageChanged(code)
-                                        // Save language change immediately so strings translate in real time
-                                        viewModel.saveSettings(settings.copy(appLanguage = code))
-                                    }
-                                    .padding(vertical = 12.dp)
-                                    .testTag("lang_option_$code"),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = currentLanguageCode == code,
-                                    onClick = {
-                                        onLanguageChanged(code)
-                                        viewModel.saveSettings(settings.copy(appLanguage = code))
-                                    }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (currentLanguageCode == code) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 2. Practice Configuration Section
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Practice Volume & Pauses",
+                            text = LocaleUtils.getString(context, R.string.practice_section, currentLanguageCode),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -166,7 +109,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        
+
                         // Use segment selectors
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -190,7 +133,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 3. WorkManager Daily Schedule Notifications
+            // 2. WorkManager Daily Schedule Notifications
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -225,7 +168,7 @@ fun SettingsScreen(
 
                         if (notificationsEnabled) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -233,7 +176,7 @@ fun SettingsScreen(
                                         val parts = notificationTime.split(":")
                                         val currentHour = parts.getOrNull(0)?.toIntOrNull() ?: 9
                                         val currentMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                                        
+
                                         TimePickerDialog(
                                             context,
                                             { _, hour, minute ->
@@ -265,7 +208,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 3.5 GitHub Audio Repository Config
+            // 3. GitHub Audio Repository Config
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -274,14 +217,14 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "GitHub Audio Source",
+                            text = LocaleUtils.getString(context, R.string.github_section, currentLanguageCode),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Format: username/repository",
+                            text = LocaleUtils.getString(context, R.string.github_format_hint, currentLanguageCode),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -289,7 +232,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = githubAudioRepo,
                             onValueChange = { githubAudioRepo = it },
-                            label = { Text("GitHub Repo Path") },
+                            label = { Text(LocaleUtils.getString(context, R.string.github_repo_path, currentLanguageCode)) },
                             modifier = Modifier.fillMaxWidth().testTag("github_repo_input"),
                             singleLine = true
                         )
@@ -303,7 +246,7 @@ fun SettingsScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
                             Text(
-                                text = if (currentLanguageCode == "fa") "بررسی دسترسی و دریافت آفلاین فایل‌ها" else "Check Access & Download Files Offline",
+                                text = LocaleUtils.getString(context, R.string.check_and_download, currentLanguageCode),
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -324,7 +267,7 @@ fun SettingsScreen(
                             githubAudioRepo = githubAudioRepo
                         )
                         viewModel.saveSettings(newSettings)
-                        
+
                         // Show snackbar confirmation
                         val successMessage = LocaleUtils.getString(context, R.string.settings_saved_success, currentLanguageCode)
                         coroutineScope.launch {
@@ -357,7 +300,7 @@ fun SettingsScreen(
                 confirmButton = {},
                 title = {
                     Text(
-                        text = if (currentLanguageCode == "fa") "بررسی اتصال" else "Checking Connection",
+                        text = LocaleUtils.getString(context, R.string.checking_connection, currentLanguageCode),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -368,7 +311,7 @@ fun SettingsScreen(
                     ) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = if (currentLanguageCode == "fa") "در حال بررسی دسترسی به مخزن..." else "Checking repository accessibility...")
+                        Text(text = LocaleUtils.getString(context, R.string.checking_repo_access, currentLanguageCode))
                     }
                 }
             )
@@ -379,7 +322,7 @@ fun SettingsScreen(
                 confirmButton = {},
                 title = {
                     Text(
-                        text = if (currentLanguageCode == "fa") "اتصال موفق" else "Connected Successfully",
+                        text = LocaleUtils.getString(context, R.string.connected_successfully, currentLanguageCode),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -402,7 +345,7 @@ fun SettingsScreen(
                 confirmButton = {},
                 title = {
                     Text(
-                        text = if (currentLanguageCode == "fa") "دریافت فایل‌های تمرینی" else "Downloading Practice Files",
+                        text = LocaleUtils.getString(context, R.string.downloading_practice_files, currentLanguageCode),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -418,12 +361,12 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = if (currentLanguageCode == "fa") "در حال دریافت: ${state.progress}%" else "Downloading: ${state.progress}%",
+                            text = LocaleUtils.getString(context, R.string.downloading_progress, currentLanguageCode, state.progress),
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (currentLanguageCode == "fa") "فایل ${state.currentFileIndex} از ${state.totalFiles}" else "File ${state.currentFileIndex} of ${state.totalFiles}",
+                            text = LocaleUtils.getString(context, R.string.file_progress, currentLanguageCode, state.currentFileIndex, state.totalFiles),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -436,17 +379,17 @@ fun SettingsScreen(
                 onDismissRequest = { viewModel.resetDownloadState() },
                 confirmButton = {
                     TextButton(onClick = { viewModel.resetDownloadState() }) {
-                        Text(text = if (currentLanguageCode == "fa") "تایید" else "OK")
+                        Text(text = LocaleUtils.getString(context, R.string.ok, currentLanguageCode))
                     }
                 },
                 title = {
                     Text(
                         text = if (state.failedCount == 0) {
-                            if (currentLanguageCode == "fa") "عملیات موفقیت‌آمیز" else "Download Completed"
+                            LocaleUtils.getString(context, R.string.operation_successful, currentLanguageCode)
                         } else if (state.successCount > 0) {
-                            if (currentLanguageCode == "fa") "دریافت ناقص" else "Partial Download"
+                            LocaleUtils.getString(context, R.string.partial_download, currentLanguageCode)
                         } else {
-                            if (currentLanguageCode == "fa") "خطا در دریافت" else "Download Failed"
+                            LocaleUtils.getString(context, R.string.download_failed, currentLanguageCode)
                         },
                         fontWeight = FontWeight.Bold,
                         color = if (state.failedCount == 0) MaterialTheme.colorScheme.primary else if (state.successCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -454,11 +397,11 @@ fun SettingsScreen(
                 },
                 text = {
                     val message = if (state.failedCount == 0) {
-                        if (currentLanguageCode == "fa") "تمامی فایل‌های صوتی (${state.successCount}) با موفقیت دریافت و ذخیره شدند!" else "All (${state.successCount}) practice audio files downloaded and saved offline successfully!"
+                        LocaleUtils.getString(context, R.string.all_files_downloaded, currentLanguageCode, state.successCount)
                     } else if (state.successCount > 0) {
-                        if (currentLanguageCode == "fa") "تعداد ${state.successCount} فایل با موفقیت دریافت شد، اما دریافت ${state.failedCount} فایل با خطا مواجه شد. لطفاً اتصال اینترنت یا آدرس و ساختار مخزن خود در گیت‌هاب را بررسی کنید." else "${state.successCount} files downloaded successfully, but ${state.failedCount} files failed. Please check your internet connection or GitHub repository structure."
+                        LocaleUtils.getString(context, R.string.some_files_failed, currentLanguageCode, state.successCount, state.failedCount)
                     } else {
-                        if (currentLanguageCode == "fa") "خطا در دریافت فایل‌ها! تمامی فایل‌های صوتی با خطا مواجه شدند. لطفاً اتصال اینترنت، نام مخزن، نام شاخه گیت‌هاب و نام‌گذاری فایل‌ها را بررسی کنید." else "Download failed! All audio files failed to download. Please verify your internet connection, repository name, branch, and file naming/structure."
+                        LocaleUtils.getString(context, R.string.all_files_failed, currentLanguageCode)
                     }
                     Text(text = message)
                 }
@@ -469,12 +412,12 @@ fun SettingsScreen(
                 onDismissRequest = { viewModel.resetDownloadState() },
                 confirmButton = {
                     TextButton(onClick = { viewModel.resetDownloadState() }) {
-                        Text(text = if (currentLanguageCode == "fa") "تایید" else "OK")
+                        Text(text = LocaleUtils.getString(context, R.string.ok, currentLanguageCode))
                     }
                 },
                 title = {
                     Text(
-                        text = if (currentLanguageCode == "fa") "خطا" else "Error",
+                        text = LocaleUtils.getString(context, R.string.error_title, currentLanguageCode),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.error
                     )

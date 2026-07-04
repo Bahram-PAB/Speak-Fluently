@@ -13,6 +13,7 @@ class RemoteAudioPackageDataSource(private val context: Context) {
 
     private val client = OkHttpClient()
     private val githubBaseUrl = "https://raw.githubusercontent.com/username/speakfluently-audio/main/packages"
+    private val FILES_PER_PACKAGE = 5
 
     fun getRemotePackagesMetadata(repo: String = "", branch: String = "", pathPrefix: String = ""): List<AudioPackage> {
         val defaultList = getHardcodedPackages()
@@ -28,7 +29,7 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                         val json = org.json.JSONObject(bodyString)
                         val treeArray = json.optJSONArray("tree")
                         if (treeArray != null) {
-                            val filesList = mutableListOf<AudioFile>()
+                            val allFiles = mutableListOf<AudioFile>()
                             for (i in 0 until treeArray.length()) {
                                 val item = treeArray.getJSONObject(i)
                                 if (item.optString("type", "") == "blob") {
@@ -43,19 +44,13 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                                             val audioUrl = "https://raw.githubusercontent.com/$repo/$branch/$path"
                                             val fid = path.replace("/", "_").replace(".", "_")
                                             val ap = if (pathPrefix.isNotEmpty()) "audio/$pathPrefix/$fn" else null
-                                            filesList.add(AudioFile(id = fid, text = name, audioUrl = audioUrl, assetPath = ap, packageName = "pkg_github"))
+                                            allFiles.add(AudioFile(id = fid, text = name, audioUrl = audioUrl, assetPath = ap, packageName = "pkg_github"))
                                         }
                                     }
                                 }
                             }
-                            if (filesList.isNotEmpty()) {
-                                return listOf(AudioPackage(
-                                    id = "pkg_github",
-                                    name = "تمارین روزانه",
-                                    description = "${filesList.size} فایل صوتی",
-                                    files = filesList,
-                                    isPremiumOnly = false
-                                ))
+                            if (allFiles.isNotEmpty()) {
+                                return createPackagesFromFiles(allFiles)
                             }
                         }
                     }
@@ -65,25 +60,40 @@ class RemoteAudioPackageDataSource(private val context: Context) {
         return defaultList
     }
 
+    private fun createPackagesFromFiles(files: List<AudioFile>): List<AudioPackage> {
+        val packages = mutableListOf<AudioPackage>()
+        val totalPackages = (files.size + FILES_PER_PACKAGE - 1) / FILES_PER_PACKAGE
+        
+        for (packageIndex in 0 until totalPackages) {
+            val start = packageIndex * FILES_PER_PACKAGE
+            val end = minOf(start + FILES_PER_PACKAGE, files.size)
+            val packageFiles = files.subList(start, end).mapIndexed { fileIndex, file ->
+                file.copy(packageName = "pkg_daily_${packageIndex + 1}")
+            }
+            
+            packages.add(AudioPackage(
+                id = "pkg_daily_${packageIndex + 1}",
+                name = "تمرین ${packageIndex + 1}",
+                description = "فایل‌های ${start + 1} تا ${end} از ${files.size}",
+                files = packageFiles,
+                isPremiumOnly = false
+            ))
+        }
+        return packages
+    }
+
     fun getHardcodedPackages(): List<AudioPackage> {
-        val dailyFiles = (1..10).map { i ->
+        val totalFiles = 20
+        val allFiles = (1..totalFiles).map { i ->
             AudioFile(
                 id = "q_daily_$i",
                 text = "",
                 audioUrl = "$githubBaseUrl/daily/speech-$i.wav",
                 assetPath = "audio/daily/speech-$i.wav",
-                packageName = "pkg_daily"
+                packageName = "pkg_daily_1"
             )
         }
-        return listOf(
-            AudioPackage(
-                id = "pkg_daily",
-                name = "تمارین روزانه",
-                description = "${dailyFiles.size} فایل صوتی برای تمرین روزانه",
-                files = dailyFiles,
-                isPremiumOnly = false
-            )
-        )
+        return createPackagesFromFiles(allFiles)
     }
 
     @Throws(IOException::class)

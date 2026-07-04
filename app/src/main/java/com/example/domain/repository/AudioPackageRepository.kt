@@ -2,7 +2,6 @@ package com.example.domain.repository
 
 import com.example.domain.model.AudioFile
 import com.example.domain.model.AudioPackage
-import com.example.domain.model.PremiumStatus
 import com.example.domain.model.Settings
 import kotlinx.coroutines.flow.Flow
 
@@ -19,8 +18,6 @@ interface AudioPackageRepository {
     fun downloadFile(file: AudioFile, force: Boolean = false): Flow<DownloadStatus>
     fun getSettings(): Flow<Settings>
     suspend fun saveSettings(settings: Settings)
-    fun getPremiumStatus(): Flow<PremiumStatus>
-    suspend fun activatePremium(code: String): Boolean
     suspend fun checkGithubAccess(repo: String): String?
     suspend fun checkFileExistsOnGithub(url: String): Boolean
     suspend fun markPackageCompleted(packageId: String)

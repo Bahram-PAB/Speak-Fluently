@@ -1,7 +1,6 @@
 package com.example
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -33,8 +31,6 @@ import com.example.ui.home.HomeScreen
 import com.example.ui.home.HomeViewModel
 import com.example.ui.player.PlayerScreen
 import com.example.ui.player.PlayerViewModel
-import com.example.ui.premium.PremiumScreen
-import com.example.ui.premium.PremiumViewModel
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.settings.SettingsViewModel
 import com.example.ui.theme.MyApplicationTheme
@@ -45,9 +41,7 @@ class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { _ ->
-        // Permission result handled gracefully
-    }
+    ) { _ -> }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,13 +49,8 @@ class MainActivity : ComponentActivity() {
 
         val appContainer = (application as SpeakFluentlyApplication).container
         
-        // Request post notifications permission on Android 13+ (SDK 33+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -69,29 +58,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyApplicationTheme {
                 val navController = rememberNavController()
-                
-                // Track current active language code inside Compose state
                 val settingsViewModel: SettingsViewModel = viewModel(
-                    factory = SettingsViewModel.provideFactory(
-                        appContainer.audioPackageRepository,
-                        this
-                    )
+                    factory = SettingsViewModel.provideFactory(appContainer.audioPackageRepository, this)
                 )
                 val settingsState by settingsViewModel.settingsState.collectAsState()
-                var currentLanguageCode by remember { mutableStateOf("fa") }
-                
-                LaunchedEffect(settingsState.appLanguage) {
-                    currentLanguageCode = settingsState.appLanguage
-                }
+                val languageCode = "fa"
 
-                // Check if activity was launched from scheduled WorkManager practice reminders
                 LaunchedEffect(intent) {
                     if (intent?.action == PracticeReminderWorker.ACTION_START_PRACTICE) {
-                        // Navigate directly to the conversational English practice package
-                        navController.navigate("player/pkg_conversational_english") {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
+                        navController.navigate("player/pkg_daily_1") {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                         }
                     }
@@ -99,9 +75,7 @@ class MainActivity : ComponentActivity() {
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-
-                // Show bottom nav bar only for root screens (don't show inside active audio practice)
-                val showBottomBar = currentRoute in listOf("home", "premium", "settings")
+                val showBottomBar = currentRoute in listOf("home", "settings")
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -109,48 +83,26 @@ class MainActivity : ComponentActivity() {
                         if (showBottomBar) {
                             NavigationBar {
                                 val context = LocalContext.current
-                                
                                 NavigationBarItem(
-                                    icon = { Icon(imageVector = Icons.Default.Home, contentDescription = null) },
-                                    label = { Text(LocaleUtils.getString(context, R.string.nav_home, currentLanguageCode)) },
+                                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                                    label = { Text(LocaleUtils.getString(context, R.string.nav_home, languageCode)) },
                                     selected = currentRoute == "home",
                                     onClick = {
                                         navController.navigate("home") {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                             launchSingleTop = true
                                             restoreState = true
                                         }
                                     },
                                     modifier = Modifier.testTag("nav_item_home")
                                 )
-
                                 NavigationBarItem(
-                                    icon = { Icon(imageVector = Icons.Default.Star, contentDescription = null) },
-                                    label = { Text(LocaleUtils.getString(context, R.string.nav_premium, currentLanguageCode)) },
-                                    selected = currentRoute == "premium",
-                                    onClick = {
-                                        navController.navigate("premium") {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    modifier = Modifier.testTag("nav_item_premium")
-                                )
-
-                                NavigationBarItem(
-                                    icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
-                                    label = { Text(LocaleUtils.getString(context, R.string.nav_settings, currentLanguageCode)) },
+                                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                                    label = { Text(LocaleUtils.getString(context, R.string.nav_settings, languageCode)) },
                                     selected = currentRoute == "settings",
                                     onClick = {
                                         navController.navigate("settings") {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                             launchSingleTop = true
                                             restoreState = true
                                         }
@@ -172,18 +124,8 @@ class MainActivity : ComponentActivity() {
                             )
                             HomeScreen(
                                 viewModel = homeViewModel,
-                                languageCode = currentLanguageCode,
-                                onStartPractice = { packageId ->
-                                    navController.navigate("player/$packageId")
-                                },
-                                onNavigateToPremium = {
-                                    navController.navigate("premium") {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                    }
-                                }
+                                languageCode = languageCode,
+                                onStartPractice = { packageId -> navController.navigate("player/$packageId") }
                             )
                         }
 
@@ -191,40 +133,23 @@ class MainActivity : ComponentActivity() {
                             route = "player/{packageId}",
                             arguments = listOf(navArgument("packageId") { type = NavType.StringType })
                         ) { backStackEntry ->
-                            val packageId = backStackEntry.arguments?.getString("packageId") ?: "pkg_conversational_english"
+                            val packageId = backStackEntry.arguments?.getString("packageId") ?: "pkg_daily_1"
                             val playerViewModel: PlayerViewModel = viewModel(
-                                factory = PlayerViewModel.provideFactory(
-                                    appContainer.audioPackageRepository,
-                                    this@MainActivity
-                                )
+                                factory = PlayerViewModel.provideFactory(appContainer.audioPackageRepository, this@MainActivity)
                             )
                             PlayerScreen(
                                 viewModel = playerViewModel,
                                 packageId = packageId,
-                                languageCode = currentLanguageCode,
-                                onBackToHome = {
-                                    navController.navigateUp()
-                                }
+                                languageCode = languageCode,
+                                onBackToHome = { navController.navigateUp() }
                             )
                         }
 
                         composable("settings") {
                             SettingsScreen(
                                 viewModel = settingsViewModel,
-                                currentLanguageCode = currentLanguageCode,
-                                onLanguageChanged = { newCode ->
-                                    currentLanguageCode = newCode
-                                }
-                            )
-                        }
-
-                        composable("premium") {
-                            val premiumViewModel: PremiumViewModel = viewModel(
-                                factory = PremiumViewModel.provideFactory(appContainer.audioPackageRepository)
-                            )
-                            PremiumScreen(
-                                viewModel = premiumViewModel,
-                                languageCode = currentLanguageCode
+                                currentLanguageCode = languageCode,
+                                onLanguageChanged = { }
                             )
                         }
                     }

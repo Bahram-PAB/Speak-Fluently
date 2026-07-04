@@ -9,7 +9,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.example.domain.model.PremiumStatus
 import com.example.domain.model.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -27,10 +26,6 @@ class LocalSettingsDataSource(private val context: Context) {
         private val KEY_GITHUB_AUDIO_REPO = stringPreferencesKey("github_audio_repo")
         private val KEY_GITHUB_BRANCH = stringPreferencesKey("github_branch")
         private val KEY_GITHUB_PATH_PREFIX = stringPreferencesKey("github_path_prefix")
-        
-        private val KEY_IS_PREMIUM = booleanPreferencesKey("is_premium")
-        private val KEY_ACTIVATION_CODE = stringPreferencesKey("activation_code")
-        
         private val KEY_PLAYED_FILES = stringSetPreferencesKey("played_files")
     }
 
@@ -55,12 +50,12 @@ class LocalSettingsDataSource(private val context: Context) {
         Settings(
             dailyNotificationTime = preferences[KEY_NOTIFICATION_TIME] ?: "09:00",
             notificationsEnabled = preferences[KEY_NOTIFICATIONS_ENABLED] ?: true,
-            appLanguage = preferences[KEY_APP_LANGUAGE] ?: "fa", // Persian is default
+            appLanguage = "fa", // Persian is default and fixed
             questionsPerSession = preferences[KEY_QUESTIONS_PER_SESSION] ?: 5,
             pauseDurationSeconds = preferences[KEY_PAUSE_DURATION] ?: 20,
             githubAudioRepo = preferences[KEY_GITHUB_AUDIO_REPO] ?: "username/speakfluently-audio",
             githubBranch = preferences[KEY_GITHUB_BRANCH] ?: "main",
-            githubPathPrefix = preferences[KEY_GITHUB_PATH_PREFIX] ?: "packages"
+            githubPathPrefix = preferences[KEY_GITHUB_PATH_PREFIX] ?: "daily"
         )
     }
 
@@ -68,30 +63,11 @@ class LocalSettingsDataSource(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[KEY_NOTIFICATION_TIME] = settings.dailyNotificationTime
             preferences[KEY_NOTIFICATIONS_ENABLED] = settings.notificationsEnabled
-            preferences[KEY_APP_LANGUAGE] = settings.appLanguage
             preferences[KEY_QUESTIONS_PER_SESSION] = settings.questionsPerSession
             preferences[KEY_PAUSE_DURATION] = settings.pauseDurationSeconds
             preferences[KEY_GITHUB_AUDIO_REPO] = settings.githubAudioRepo
             preferences[KEY_GITHUB_BRANCH] = settings.githubBranch
             preferences[KEY_GITHUB_PATH_PREFIX] = settings.githubPathPrefix
-        }
-    }
-
-    val premiumStatusFlow: Flow<PremiumStatus> = context.dataStore.data.map { preferences ->
-        PremiumStatus(
-            isPremium = preferences[KEY_IS_PREMIUM] ?: false,
-            activationCode = preferences[KEY_ACTIVATION_CODE]
-        )
-    }
-
-    suspend fun savePremiumStatus(premiumStatus: PremiumStatus) {
-        context.dataStore.edit { preferences ->
-            preferences[KEY_IS_PREMIUM] = premiumStatus.isPremium
-            if (premiumStatus.activationCode != null) {
-                preferences[KEY_ACTIVATION_CODE] = premiumStatus.activationCode
-            } else {
-                preferences.remove(KEY_ACTIVATION_CODE)
-            }
         }
     }
 }

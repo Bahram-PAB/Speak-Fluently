@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.AudioFile
 import com.example.domain.model.AudioPackage
-import com.example.domain.model.PremiumStatus
 import com.example.domain.repository.AudioPackageRepository
 import com.example.domain.repository.DownloadStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,14 +12,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val packages: List<AudioPackage> = emptyList(),
-    val premiumStatus: PremiumStatus = PremiumStatus(),
     val isLoading: Boolean = true,
-    val downloadStatuses: Map<String, DownloadStatus> = emptyMap()
+    val downloadStatuses: Map<String, DownloadStatus> = emptyMap(),
+    val completedPackageIds: Set<String> = emptySet()
 )
 
 class HomeViewModel(private val repository: AudioPackageRepository) : ViewModel() {
@@ -29,12 +29,10 @@ class HomeViewModel(private val repository: AudioPackageRepository) : ViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(
         repository.getPackages(),
-        repository.getPremiumStatus(),
         _downloadStatuses
-    ) { packages, premiumStatus, downloadStatuses ->
+    ) { packages, downloadStatuses ->
         HomeUiState(
             packages = packages,
-            premiumStatus = premiumStatus,
             isLoading = false,
             downloadStatuses = downloadStatuses
         )
@@ -52,6 +50,12 @@ class HomeViewModel(private val repository: AudioPackageRepository) : ViewModel(
                 }
             }
         }
+    }
+
+    fun isPackageUnlocked(packageIndex: Int, completedIds: Set<String>): Boolean {
+        if (packageIndex == 0) return true
+        val previousPackageId = "pkg_daily_$packageIndex"
+        return completedIds.contains(previousPackageId)
     }
 
     companion object {

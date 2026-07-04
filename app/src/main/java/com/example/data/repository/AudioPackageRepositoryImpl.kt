@@ -7,7 +7,6 @@ import com.example.domain.repository.DownloadStatus
 import com.example.domain.repository.AudioPackageRepository
 import com.example.domain.model.AudioFile
 import com.example.domain.model.AudioPackage
-import com.example.domain.model.PremiumStatus
 import com.example.domain.model.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,9 +29,7 @@ class AudioPackageRepositoryImpl(
     private var cachedPackages: List<AudioPackage>? = null
 
     override fun getPlayedFileIds(): Flow<Set<String>> = localSettings.playedFilesFlow
-
     override suspend fun markFileAsPlayed(fileId: String) = localSettings.markFileAsPlayed(fileId)
-
     override suspend fun clearPlayedFiles() = localSettings.clearPlayedFiles()
 
     private fun copyAssetToLocalIfPresent(file: AudioFile, targetFile: File): Boolean {
@@ -100,14 +97,6 @@ class AudioPackageRepositoryImpl(
 
     override fun getSettings(): Flow<Settings> = localSettings.settingsFlow
     override suspend fun saveSettings(settings: Settings) = localSettings.saveSettings(settings)
-    override fun getPremiumStatus(): Flow<PremiumStatus> = localSettings.premiumStatusFlow
-
-    override suspend fun activatePremium(code: String): Boolean {
-        val sanitized = code.trim().uppercase()
-        val isValid = sanitized == "SPEAK2026" || sanitized == "FLUENT" || sanitized == "FREEPASS"
-        if (isValid) localSettings.savePremiumStatus(PremiumStatus(isPremium = true, activationCode = sanitized))
-        return isValid
-    }
 
     override suspend fun checkGithubAccess(repo: String): String? = withContext(Dispatchers.IO) {
         val repoClean = extractGithubRepo(repo)
