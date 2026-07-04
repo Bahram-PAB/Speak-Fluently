@@ -1,24 +1,19 @@
 package com.example
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -30,7 +25,6 @@ import com.example.ui.player.PlayerViewModel
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.settings.SettingsViewModel
 import com.example.ui.theme.SpeakFluentlyTheme
-import com.example.utils.LocaleUtils
 
 class MainActivity : ComponentActivity() {
 
@@ -57,11 +51,16 @@ class MainActivity : ComponentActivity() {
 
                     // Hardcode language to Persian
                     val languageCode = "fa"
-                    LocaleUtils.setLocale(this, languageCode)
 
-                    val homeViewModel: HomeViewModel by viewModels { HomeViewModel.provideFactory(appContainer.audioPackageRepository, appContainer.localSettingsDataSource) }
-                    val playerViewModel: PlayerViewModel by viewModels { PlayerViewModel.provideFactory(appContainer.audioPackageRepository, appContainer.localSettingsDataSource) }
-                    val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.provideFactory(appContainer.audioPackageRepository, appContainer.localSettingsDataSource) }
+                    val homeViewModel: HomeViewModel by viewModels {
+                        HomeViewModel.provideFactory(appContainer.audioPackageRepository, appContainer.localSettingsDataSource)
+                    }
+                    val playerViewModel: PlayerViewModel by viewModels {
+                        PlayerViewModel.provideFactory(appContainer.audioPackageRepository, applicationContext)
+                    }
+                    val settingsViewModel: SettingsViewModel by viewModels {
+                        SettingsViewModel.provideFactory(appContainer.audioPackageRepository, appContainer.localSettingsDataSource)
+                    }
 
                     NavHost(navController = navController, startDestination = "home") {
                         composable("home") {
@@ -69,7 +68,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = homeViewModel,
                                 languageCode = languageCode,
                                 onStartPractice = { packageId -> navController.navigate("player/$packageId") },
-                                onNavigateToSettings = { navController.navigate("settings") } // Add settings navigation
+                                onNavigateToSettings = { navController.navigate("settings") }
                             )
                         }
                         composable("player/{packageId}") {
@@ -77,16 +76,14 @@ class MainActivity : ComponentActivity() {
                             if (packageId != null) {
                                 PlayerScreen(
                                     viewModel = playerViewModel,
-                                    languageCode = languageCode,
                                     packageId = packageId,
-                                    onBack = { navController.popBackStack() },
-                                    onCompletePackage = { // Handle package completion
+                                    languageCode = languageCode,
+                                    onBackToHome = {
                                         homeViewModel.markPackageAsCompleted(packageId)
-                                        navController.popBackStack() // Go back to home after completion
+                                        navController.popBackStack()
                                     }
                                 )
                             } else {
-                                // Handle error or navigate back
                                 navController.popBackStack()
                             }
                         }
@@ -94,7 +91,7 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(
                                 viewModel = settingsViewModel,
                                 currentLanguageCode = languageCode,
-                                onLanguageChanged = { /* Language is hardcoded, so no action needed */ }
+                                onLanguageChanged = { /* Language is hardcoded, no action needed */ }
                             )
                         }
                     }
