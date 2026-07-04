@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.LocalSettingsDataSource
 import com.example.domain.model.Settings
 import com.example.domain.repository.AudioPackageRepository
+import com.example.domain.repository.DownloadStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -36,6 +38,12 @@ class SettingsViewModel(
     private val _downloadState = MutableStateFlow<DownloadProgressState>(DownloadProgressState.Idle)
     val downloadState: StateFlow<DownloadProgressState> = _downloadState
 
+    fun saveSettings(settings: Settings) {
+        viewModelScope.launch {
+            localSettings.saveSettings(settings)
+        }
+    }
+
     fun checkAndDownloadAll(githubRepo: String) {
         viewModelScope.launch {
             _downloadState.value = DownloadProgressState.CheckingAccess
@@ -45,58 +53,46 @@ class SettingsViewModel(
                     _downloadState.value = DownloadProgressState.Error(result)
                     return@launch
                 }
-                _downloadState.value = DownloadProgressState.AccessSuccess("Repository access confirmed. Starting download...")
+                _downloadState.value = DownloadProgressState.AccessSuccess("دسترسی به مخزن تایید شد. شروع دریافت فایل‌ها...")
                 downloadAllFiles()
             } catch (e: Exception) {
-                _downloadState.value = DownloadProgressState.Error("Network error: ${e.message}")
+                _downloadState.value = DownloadProgressState.Error("خطای شبکه: ${e.message}")
             }
         }
     }
 
-    private fun downloadAllFiles() {
-        viewModelScope.launch {
-            val packages = repository.getPackages().first()
-            val allFiles = packages.flatMap { it.files }
-            val totalFiles = allFiles.size
-            var successCount = 0
-            var failedCount = 0
+    private suspend fun downloadAllFiles() {
+        val packages = repository.getPackages().first()
+        val allFiles = packages.flatMap { it.files }
+        val totalFiles = allFiles.size
+        if (totalFiles == 0) {
+            _downloadState.value = DownloadProgressState.Finished(0, 0, "فایلی برای دریافت یافت نشد")
+            return
+        }
+        var successCount = 0
+        var failedCount = 0
 
-            allFiles.forEachIndexed { index, file ->
-                repository.downloadFile(file, force = false).collect { status ->
-                    when (status) {
-                        is DownloadStatus.Success -> {
-                            successCount++
-                            _downloadState.value = DownloadProgressState.Downloading(
-                                progress = ((index + 1) * 100 / totalFiles).coerceAtMost(100),
-                                currentFileIndex = index + 1,
-                                totalFiles = totalFiles
-                            )
-                        }
-                        is DownloadStatus.Error -> {
-                            failedCount++
-                        }
-                        else -> {
-                            _downloadState.value = DownloadProgressState.Downloading(
-                                progress = ((index + 1) * 100 / totalFiles).coerceAtMost(100),
-                                currentFileIndex = index + 1,
-                                totalFiles = totalFiles
-                            )
-                        }
-                    }
+        allFiles.forEachIndexed { index, file ->
+            repository.downloadFile(file, force = false).collect { status ->
+                when (status) {
+                    is DownloadStatus.Success -> successCount++
+                    is DownloadStatus.Error -> failedCount++
+                    else -> {}
                 }
             }
-
-            val message = if (failedCount == 0) "All files downloaded successfully" else "$successCount downloaded, $failedCount failed"
-            _downloadState.value = DownloadProgressState.Finished(successCount, failedCount, message)
+            _downloadState.value = DownloadProgressState.Downloading(
+                progress = ((index + 1) * 100 / totalFiles).coerceAtMost(100),
+                currentFileIndex = index + 1,
+                totalFiles = totalFiles
+            )
         }
+
+        val message = if (failedCount == 0) "تمام فایل‌ها با موفقیت دریافت شدند" else "$successCount فایل دریافت شد، $failedCount فایل با خطا مواجه شد"
+        _downloadState.value = DownloadProgressState.Finished(successCount, failedCount, message)
     }
 
     fun resetDownloadState() {
         _downloadState.value = DownloadProgressState.Idle
-    }
-
-    suspend fun saveSettings(settings: Settings) {
-        localSettings.saveSettings(settings)
     }
 
     companion object {

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
@@ -18,10 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
 import com.example.domain.model.Settings
-import com.example.utils.LocaleUtils
-import java.util.Calendar
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +32,6 @@ fun SettingsScreen(
     val settings by viewModel.settingsState.collectAsState()
     val downloadState by viewModel.downloadState.collectAsState()
 
-    // Temporary states during configuration before hitting Save
     var questionsCount by remember(settings) { mutableStateOf(settings.questionsPerSession) }
     var pauseSeconds by remember(settings) { mutableStateOf(settings.pauseDurationSeconds) }
     var notificationsEnabled by remember(settings) { mutableStateOf(settings.notificationsEnabled) }
@@ -50,10 +45,7 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.settings_title, currentLanguageCode),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(text = "تنظیمات تمرین", fontWeight = FontWeight.Bold)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -71,7 +63,7 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 1. Practice Configuration Section
+            // Practice Configuration
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -80,16 +72,15 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = LocaleUtils.getString(context, R.string.practice_section, currentLanguageCode),
+                            text = "تنظیمات تمرین",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Questions per Session
                         Text(
-                            text = "${LocaleUtils.getString(context, R.string.questions_per_session_label, currentLanguageCode)}: $questionsCount",
+                            text = "تعداد سوالات در هر جلسه: $questionsCount",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -97,35 +88,27 @@ fun SettingsScreen(
                             value = questionsCount.toFloat(),
                             onValueChange = { questionsCount = it.toInt() },
                             valueRange = 5f..20f,
-                            steps = 2, // Steps: 5, 10, 15, 20
+                            steps = 2,
                             modifier = Modifier.testTag("questions_count_slider")
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Pause duration
                         Text(
-                            text = "${LocaleUtils.getString(context, R.string.pause_duration_label, currentLanguageCode)}: $pauseSeconds",
+                            text = "زمان مکث بین سوالات: $pauseSeconds ثانیه",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-
-                        // Use segment selectors
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                         ) {
-                            val pauses = listOf(20, 30, 60, 90)
-                            pauses.forEach { duration ->
+                            listOf(20, 30, 60, 90).forEach { duration ->
                                 FilterChip(
                                     selected = pauseSeconds == duration,
                                     onClick = { pauseSeconds = duration },
-                                    label = { Text("$duration s") },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("pause_chip_$duration")
+                                    label = { Text("$duration ثانیه") },
+                                    modifier = Modifier.weight(1f).testTag("pause_chip_$duration")
                                 )
                             }
                         }
@@ -133,7 +116,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. WorkManager Daily Schedule Notifications
+            // Notifications
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -147,68 +130,33 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                                Icon(imageVector = Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = LocaleUtils.getString(context, R.string.notification_settings, currentLanguageCode),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text(text = "یادآوری روزانه", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
-                            Switch(
-                                checked = notificationsEnabled,
-                                onCheckedChange = { notificationsEnabled = it },
-                                modifier = Modifier.testTag("notification_switch")
-                            )
+                            Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it }, modifier = Modifier.testTag("notification_switch"))
                         }
-
                         if (notificationsEnabled) {
                             Spacer(modifier = Modifier.height(16.dp))
-
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        val parts = notificationTime.split(":")
-                                        val currentHour = parts.getOrNull(0)?.toIntOrNull() ?: 9
-                                        val currentMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
-
-                                        TimePickerDialog(
-                                            context,
-                                            { _, hour, minute ->
-                                                notificationTime = String.format("%02d:%02d", hour, minute)
-                                            },
-                                            currentHour,
-                                            currentMinute,
-                                            true
-                                        ).show()
-                                    }
-                                    .padding(vertical = 12.dp)
-                                    .testTag("reminder_time_picker"),
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    val parts = notificationTime.split(":")
+                                    val h = parts.getOrNull(0)?.toIntOrNull() ?: 9
+                                    val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                    TimePickerDialog(context, { _, hour, minute -> notificationTime = String.format("%02d:%02d", hour, minute) }, h, m, true).show()
+                                }.padding(vertical = 12.dp).testTag("reminder_time_picker"),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = LocaleUtils.getString(context, R.string.reminder_time_label, currentLanguageCode),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    text = notificationTime,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Text(text = "زمان یادآوری", style = MaterialTheme.typography.bodyLarge)
+                                Text(text = notificationTime, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
                 }
             }
 
-            // 3. GitHub Audio Repository Config
+            // GitHub Audio Source
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -217,14 +165,14 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = LocaleUtils.getString(context, R.string.github_section, currentLanguageCode),
+                            text = "منبع فایل‌های صوتی",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = LocaleUtils.getString(context, R.string.github_format_hint, currentLanguageCode),
+                            text = "فرمت: username/repository",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -232,200 +180,102 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = githubAudioRepo,
                             onValueChange = { githubAudioRepo = it },
-                            label = { Text(LocaleUtils.getString(context, R.string.github_repo_path, currentLanguageCode)) },
+                            label = { Text("آدرس مخزن گیت‌هاب") },
                             modifier = Modifier.fillMaxWidth().testTag("github_repo_input"),
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
-                            onClick = {
-                                viewModel.checkAndDownloadAll(githubAudioRepo)
-                            },
+                            onClick = { viewModel.checkAndDownloadAll(githubAudioRepo) },
                             modifier = Modifier.fillMaxWidth().testTag("check_and_download_btn"),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Text(
-                                text = LocaleUtils.getString(context, R.string.check_and_download, currentLanguageCode),
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text(text = "بررسی دسترسی و دریافت فایل‌ها", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
 
-            // 4. Save Button
+            // Save
             item {
                 Button(
                     onClick = {
-                        val newSettings = Settings(
-                            dailyNotificationTime = notificationTime,
-                            notificationsEnabled = notificationsEnabled,
-                            appLanguage = currentLanguageCode,
-                            questionsPerSession = questionsCount,
-                            pauseDurationSeconds = pauseSeconds,
-                            githubAudioRepo = githubAudioRepo
+                        viewModel.saveSettings(
+                            Settings(
+                                dailyNotificationTime = notificationTime,
+                                notificationsEnabled = notificationsEnabled,
+                                appLanguage = "fa",
+                                questionsPerSession = questionsCount,
+                                pauseDurationSeconds = pauseSeconds,
+                                githubAudioRepo = githubAudioRepo
+                            )
                         )
-                        viewModel.saveSettings(newSettings)
-
-                        // Show snackbar confirmation
-                        val successMessage = LocaleUtils.getString(context, R.string.settings_saved_success, currentLanguageCode)
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar(successMessage)
-                        }
+                        coroutineScope.launch { snackbarHostState.showSnackbar("تنظیمات با موفقیت ذخیره شد!") }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .testTag("save_settings_btn"),
+                    modifier = Modifier.fillMaxWidth().height(56.dp).testTag("save_settings_btn"),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Done, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.save_settings_btn, currentLanguageCode),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    Text(text = "ذخیره تنظیمات", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
     }
 
+    // Download progress dialogs
     when (val state = downloadState) {
-        is DownloadProgressState.Idle -> { /* Do nothing */ }
+        is DownloadProgressState.Idle -> {}
         is DownloadProgressState.CheckingAccess -> {
-            AlertDialog(
-                onDismissRequest = {},
-                confirmButton = {},
-                title = {
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.checking_connection, currentLanguageCode),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = LocaleUtils.getString(context, R.string.checking_repo_access, currentLanguageCode))
-                    }
+            AlertDialog(onDismissRequest = {}, confirmButton = {}, title = { Text("بررسی اتصال", fontWeight = FontWeight.Bold) }, text = {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("در حال بررسی دسترسی به مخزن...")
                 }
-            )
+            })
         }
         is DownloadProgressState.AccessSuccess -> {
-            AlertDialog(
-                onDismissRequest = {},
-                confirmButton = {},
-                title = {
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.connected_successfully, currentLanguageCode),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = state.message)
-                    }
+            AlertDialog(onDismissRequest = {}, confirmButton = {}, title = { Text("اتصال موفق", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }, text = {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(state.message)
                 }
-            )
+            })
         }
         is DownloadProgressState.Downloading -> {
-            AlertDialog(
-                onDismissRequest = {},
-                confirmButton = {},
-                title = {
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.downloading_practice_files, currentLanguageCode),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        LinearProgressIndicator(
-                            progress = { state.progress / 100f },
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = LocaleUtils.getString(context, R.string.downloading_progress, currentLanguageCode, state.progress),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = LocaleUtils.getString(context, R.string.file_progress, currentLanguageCode, state.currentFileIndex, state.totalFiles),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            AlertDialog(onDismissRequest = {}, confirmButton = {}, title = { Text("دریافت فایل‌های تمرینی", fontWeight = FontWeight.Bold) }, text = {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    LinearProgressIndicator(progress = { state.progress / 100f }, modifier = Modifier.fillMaxWidth().height(8.dp), color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("در حال دریافت: ${state.progress}%", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("فایل ${state.currentFileIndex} از ${state.totalFiles}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            )
+            })
         }
         is DownloadProgressState.Finished -> {
-            AlertDialog(
-                onDismissRequest = { viewModel.resetDownloadState() },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.resetDownloadState() }) {
-                        Text(text = LocaleUtils.getString(context, R.string.ok, currentLanguageCode))
-                    }
-                },
-                title = {
-                    Text(
-                        text = if (state.failedCount == 0) {
-                            LocaleUtils.getString(context, R.string.operation_successful, currentLanguageCode)
-                        } else if (state.successCount > 0) {
-                            LocaleUtils.getString(context, R.string.partial_download, currentLanguageCode)
-                        } else {
-                            LocaleUtils.getString(context, R.string.download_failed, currentLanguageCode)
-                        },
-                        fontWeight = FontWeight.Bold,
-                        color = if (state.failedCount == 0) MaterialTheme.colorScheme.primary else if (state.successCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                    )
-                },
-                text = {
-                    val message = if (state.failedCount == 0) {
-                        LocaleUtils.getString(context, R.string.all_files_downloaded, currentLanguageCode, state.successCount)
-                    } else if (state.successCount > 0) {
-                        LocaleUtils.getString(context, R.string.some_files_failed, currentLanguageCode, state.successCount, state.failedCount)
-                    } else {
-                        LocaleUtils.getString(context, R.string.all_files_failed, currentLanguageCode)
-                    }
-                    Text(text = message)
-                }
-            )
+            AlertDialog(onDismissRequest = { viewModel.resetDownloadState() }, confirmButton = {
+                TextButton(onClick = { viewModel.resetDownloadState() }) { Text("تایید") }
+            }, title = {
+                Text(
+                    text = if (state.failedCount == 0) "عملیات موفق" else if (state.successCount > 0) "دریافت ناقص" else "خطا در دریافت",
+                    fontWeight = FontWeight.Bold,
+                    color = if (state.failedCount > 0 && state.successCount == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            }, text = {
+                val msg = if (state.failedCount == 0) "تمامی فایل‌ها (${state.successCount}) با موفقیت دریافت شدند!"
+                else if (state.successCount > 0) "${state.successCount} فایل دریافت شد، ${state.failedCount} فایل با خطا مواجه شد."
+                else "خطا در دریافت فایل‌ها! لطفاً اتصال اینترنت و آدرس مخزن را بررسی کنید."
+                Text(text = msg)
+            })
         }
         is DownloadProgressState.Error -> {
-            AlertDialog(
-                onDismissRequest = { viewModel.resetDownloadState() },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.resetDownloadState() }) {
-                        Text(text = LocaleUtils.getString(context, R.string.ok, currentLanguageCode))
-                    }
-                },
-                title = {
-                    Text(
-                        text = LocaleUtils.getString(context, R.string.error_title, currentLanguageCode),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                },
-                text = {
-                    Text(text = state.message)
-                }
-            )
+            AlertDialog(onDismissRequest = { viewModel.resetDownloadState() }, confirmButton = {
+                TextButton(onClick = { viewModel.resetDownloadState() }) { Text("تایید") }
+            }, title = { Text("خطا", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) }, text = { Text(state.message) })
         }
     }
 }

@@ -3,6 +3,7 @@ package com.example.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.local.LocalSettingsDataSource
 import com.example.domain.model.AudioFile
 import com.example.domain.model.AudioPackage
 import com.example.domain.repository.AudioPackageRepository
@@ -10,9 +11,7 @@ import com.example.domain.repository.DownloadStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -23,18 +22,24 @@ data class HomeUiState(
     val completedPackageIds: Set<String> = emptySet()
 )
 
-class HomeViewModel(private val repository: AudioPackageRepository) : ViewModel() {
+class HomeViewModel(
+    private val repository: AudioPackageRepository,
+    private val localSettings: LocalSettingsDataSource
+) : ViewModel() {
 
     private val _downloadStatuses = MutableStateFlow<Map<String, DownloadStatus>>(emptyMap())
+    private val _completedPackageIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<HomeUiState> = combine(
         repository.getPackages(),
-        _downloadStatuses
-    ) { packages, downloadStatuses ->
+        _downloadStatuses,
+        _completedPackageIds
+    ) { packages, downloadStatuses, completedIds ->
         HomeUiState(
             packages = packages,
             isLoading = false,
-            downloadStatuses = downloadStatuses
+            downloadStatuses = downloadStatuses,
+            completedPackageIds = completedIds
         )
     }.stateIn(
         scope = viewModelScope,
@@ -52,19 +57,22 @@ class HomeViewModel(private val repository: AudioPackageRepository) : ViewModel(
         }
     }
 
-    fun isPackageUnlocked(packageIndex: Int, completedIds: Set<String>): Boolean {
-        if (packageIndex == 0) return true
-        val previousPackageId = "pkg_daily_$packageIndex"
-        return completedIds.contains(previousPackageId)
+    fun markPackageAsCompleted(packageId: String) {
+        viewModelScope.launch {
+            repository.markPackageCompleted(packageId)
+            _completedPackageIds.value = _completedPackageIds.value + packageId
+        }
     }
 
     companion object {
-        fun provideFactory(repository: AudioPackageRepository): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return HomeViewModel(repository) as T
-                }
+        fun provideFactory(
+            repository: AudioPackageRepository,
+            localSettings: LocalSettingsDataSource
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return HomeViewModel(repository, localSettings) as T
             }
+        }
     }
 }

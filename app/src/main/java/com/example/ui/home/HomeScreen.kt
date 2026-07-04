@@ -27,6 +27,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     languageCode: String,
     onStartPractice: (String) -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -36,6 +37,11 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text(LocaleUtils.getString(context, R.string.app_name, languageCode)) },
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "تنظیمات")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -95,9 +101,7 @@ fun PackageCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            
             Spacer(modifier = Modifier.width(16.dp))
-            
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = audioPackage.name,
@@ -110,17 +114,10 @@ fun PackageCard(
                     color = MaterialTheme.colorScheme.outline
                 )
             }
-            
             if (isUnlocked) {
-                Button(onClick = onStartPracticeClick) {
-                    Text("شروع")
-                }
+                Button(onClick = onStartPracticeClick) { Text("شروع") }
             } else {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "قفل",
-                    tint = MaterialTheme.colorScheme.outline
-                )
+                Icon(imageVector = Icons.Default.Lock, contentDescription = "قفل", tint = MaterialTheme.colorScheme.outline)
             }
         }
     }
