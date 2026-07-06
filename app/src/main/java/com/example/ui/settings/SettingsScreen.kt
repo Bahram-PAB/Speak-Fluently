@@ -186,12 +186,12 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
-                            onClick = { viewModel.checkAndDownloadAll(githubAudioRepo) },
-                            modifier = Modifier.fillMaxWidth().testTag("check_and_download_btn"),
+                            onClick = { viewModel.checkGithubAccess(githubAudioRepo) },
+                            modifier = Modifier.fillMaxWidth().testTag("check_access_btn"),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Text(text = "بررسی دسترسی و دریافت فایل‌ها", fontWeight = FontWeight.Bold)
+                            Text(text = "بررسی دسترسی و ذخیره", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -44,51 +43,20 @@ class SettingsViewModel(
         }
     }
 
-    fun checkAndDownloadAll(githubRepo: String) {
+    fun checkGithubAccess(githubRepo: String) {
         viewModelScope.launch {
             _downloadState.value = DownloadProgressState.CheckingAccess
             try {
                 val result = repository.checkGithubAccess(githubRepo)
                 if (result != null) {
                     _downloadState.value = DownloadProgressState.Error(result)
-                    return@launch
+                } else {
+                    _downloadState.value = DownloadProgressState.Finished(0, 0, "دسترسی به مخزن تایید شد. فایل‌ها هنگام باز کردن هر تمرین دانلود می‌شوند.")
                 }
-                _downloadState.value = DownloadProgressState.AccessSuccess("دسترسی به مخزن تایید شد. شروع دریافت فایل‌ها...")
-                downloadAllFiles()
             } catch (e: Exception) {
                 _downloadState.value = DownloadProgressState.Error("خطای شبکه: ${e.message}")
             }
         }
-    }
-
-    private suspend fun downloadAllFiles() {
-        val packages = repository.getPackages().first()
-        val allFiles = packages.flatMap { it.files }
-        val totalFiles = allFiles.size
-        if (totalFiles == 0) {
-            _downloadState.value = DownloadProgressState.Finished(0, 0, "فایلی برای دریافت یافت نشد")
-            return
-        }
-        var successCount = 0
-        var failedCount = 0
-
-        allFiles.forEachIndexed { index, file ->
-            repository.downloadFile(file, force = false).collect { status ->
-                when (status) {
-                    is DownloadStatus.Success -> successCount++
-                    is DownloadStatus.Error -> failedCount++
-                    else -> {}
-                }
-            }
-            _downloadState.value = DownloadProgressState.Downloading(
-                progress = ((index + 1) * 100 / totalFiles).coerceAtMost(100),
-                currentFileIndex = index + 1,
-                totalFiles = totalFiles
-            )
-        }
-
-        val message = if (failedCount == 0) "تمام فایل‌ها با موفقیت دریافت شدند" else "$successCount فایل دریافت شد، $failedCount فایل با خطا مواجه شد"
-        _downloadState.value = DownloadProgressState.Finished(successCount, failedCount, message)
     }
 
     fun resetDownloadState() {

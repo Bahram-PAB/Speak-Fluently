@@ -32,18 +32,6 @@ class AudioPackageRepositoryImpl(
     override suspend fun markFileAsPlayed(fileId: String) = localSettings.markFileAsPlayed(fileId)
     override suspend fun clearPlayedFiles() = localSettings.clearPlayedFiles()
 
-    private fun copyAssetToLocalIfPresent(file: AudioFile, targetFile: File): Boolean {
-        if (targetFile.exists() && targetFile.length() > 0L) return true
-        val assetPath = file.assetPath ?: return false
-        return try {
-            context.assets.open(assetPath).use { input ->
-                targetFile.parentFile?.apply { if (!exists()) mkdirs() }
-                java.io.FileOutputStream(targetFile).use { output -> input.copyTo(output) }
-            }
-            true
-        } catch (e: Exception) { false }
-    }
-
     override fun getPackages(): Flow<List<AudioPackage>> = flow {
         cachedPackages?.let { emit(it) }
         try {
@@ -53,11 +41,12 @@ class AudioPackageRepositoryImpl(
             val branch = s.githubBranch
             val prefix = s.githubPathPrefix
             val remoteMetadata = remotePackages.getRemotePackagesMetadata(repo, branch, prefix)
+
+            // Check which files are already downloaded locally
             val mappedList = remoteMetadata.map { pkg ->
                 pkg.copy(files = pkg.files.map { file ->
                     val ext = file.audioUrl.substringAfterLast(".", "wav")
                     val localFile = File(downloadsDir, "${file.id}.$ext")
-                    copyAssetToLocalIfPresent(file, localFile)
                     file.copy(localPath = if (localFile.exists() && localFile.length() > 0L) localFile.absolutePath else null)
                 })
             }
@@ -65,7 +54,7 @@ class AudioPackageRepositoryImpl(
             emit(mappedList)
         } catch (e: Exception) {
             e.printStackTrace()
-            emit(cachedPackages ?: remotePackages.getHardcodedPackages())
+            emit(cachedPackages ?: emptyList())
         }
     }.flowOn(Dispatchers.IO)
 
@@ -76,11 +65,6 @@ class AudioPackageRepositoryImpl(
         val localFile = File(downloadsDir, "${file.id}.$ext")
         emit(DownloadStatus.Progress(10))
         if (!force && localFile.exists() && localFile.length() > 0L) {
-            emit(DownloadStatus.Success(localFile.absolutePath))
-            return@flow
-        }
-        if (copyAssetToLocalIfPresent(file, localFile)) {
-            emit(DownloadStatus.Progress(100))
             emit(DownloadStatus.Success(localFile.absolutePath))
             return@flow
         }
