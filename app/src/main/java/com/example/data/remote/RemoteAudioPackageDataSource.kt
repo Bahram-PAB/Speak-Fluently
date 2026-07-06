@@ -56,7 +56,7 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                                     .map { (folderName, files) ->
                                         AudioPackage(
                                             id = "pkg_$folderName",
-                                            name = "تمرین $folderName",
+                                            name = "تمرین روز $folderName",
                                             description = "${files.size} فایل صوتی",
                                             files = files,
                                             isPremiumOnly = false
@@ -92,10 +92,10 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                 }.sorted()
 
                 if (audioFiles.isNotEmpty()) {
-                    val packageFiles = audioFiles.map { fileName ->
+                    val packageFiles = audioFiles.mapIndexed { index, fileName ->
                         val name = fileName.substringBeforeLast(".").replace("_", " ").replace("-", " ").trim()
                         AudioFile(
-                            id = "pkg_${folderName}_${fileName.replace(".", "_")}",
+                            id = "pkg_${folderName}_${index + 1}",
                             text = name,
                             audioUrl = "$githubBaseUrl/$folderName/$fileName",
                             assetPath = "$folderPath/$fileName",
@@ -104,7 +104,7 @@ class RemoteAudioPackageDataSource(private val context: Context) {
                     }
                     packages.add(AudioPackage(
                         id = "pkg_$folderName",
-                        name = "تمرین $folderName",
+                        name = "تمرین روز $folderName",
                         description = "${packageFiles.size} فایل صوتی",
                         files = packageFiles,
                         isPremiumOnly = false
