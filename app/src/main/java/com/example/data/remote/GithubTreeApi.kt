@@ -57,7 +57,7 @@ class GithubTreeApi(private val client: OkHttpClient) {
                 val segments = fullPath.split("/")
 
                 // Find first segment that is a pure number (folder number)
-                val folderSegment = segments.firstOrNull { it.matches(Regex("^\d+$")) } 
+                val folderSegment = segments.firstOrNull { it.matches(Regex("^\\d+$")) } 
                     ?: continue
 
                 val folderNum = folderSegment.toIntOrNull() ?: continue
