@@ -1,291 +1,84 @@
 package com.example.ui.player
 
-import android.content.Context
-import android.media.MediaPlayer
-import android.net.Uri
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.AudioFile
-import com.example.domain.model.AudioPackage
-import com.example.domain.model.Settings
-import com.example.domain.repository.AudioPackageRepository
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import com.example.data.repository.AudioExerciseRepository
+import com.example.domain.model.Exercise
+import com.example.domain.model.ExerciseFile
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 
-sealed interface SessionState {
-    object Idle : SessionState
-    object Loading : SessionState
-    data class PlayingAudio(val currentQuestionIndex: Int) : SessionState
-    data class PracticingPause(val currentQuestionIndex: Int, val secondsRemaining: Int) : SessionState
-    object Completed : SessionState
-}
+class PlayerViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = AudioExerciseRepository.getInstance(application)
 
-data class PlayerUiState(
-    val sessionState: SessionState = SessionState.Idle,
-    val currentPackage: AudioPackage? = null,
-    val questions: List<AudioFile> = emptyList(),
-    val settings: Settings = Settings(),
-    val isPaused: Boolean = false
-)
+    private val _exercise = MutableStateFlow<Exercise?>(null)
+    val exercise: StateFlow<Exercise?> = _exercise
 
-class PlayerViewModel(
-    private val repository: AudioPackageRepository,
-    private val appContext: Context
-) : ViewModel() {
+    private val _currentFileIndex = MutableStateFlow(0)
+    val currentFileIndex: StateFlow<Int> = _currentFileIndex
 
-    private val _uiState = MutableStateFlow(PlayerUiState())
-    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+    private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
+    val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
-    private var mediaPlayer: MediaPlayer? = null
-    private var timerJob: Job? = null
-    private var currentQuestionIndex = 0
+    private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
-    val settingsState = repository.getSettings().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = Settings()
-    )
-
-    fun startSession(packageId: String) {
+    fun loadExercise(exerciseId: Int) {
+        val allExercises = repository.getExercises()
         viewModelScope.launch {
-            _uiState.update { it.copy(sessionState = SessionState.Loading) }
-            
-            try {
-                val settings = repository.getSettings().first()
-                var audioPackage = repository.getPackageById(packageId).first()
-                
-                if (audioPackage == null) {
-                    audioPackage = repository.getPackages().first().firstOrNull()
+            allExercises.first().collect { exercises ->
+                val exercise = exercises.find { it.id == exerciseId }
+                _exercise.value = exercise
+                _currentFileIndex.value = 0
+                if (exercise != null && !exercise.files.all { it.isDownloaded }) {
+                    downloadFiles(exercise)
                 }
-                
-                if (audioPackage == null) {
-                    _uiState.update { it.copy(sessionState = SessionState.Idle) }
-                    return@launch
-                }
-
-                val playedIds = repository.getPlayedFileIds().first()
-                var availableQuestions = audioPackage.files.filter { file ->
-                    !playedIds.contains(file.id)
-                }
-
-                // If all files in this package are played, reset played status for this package
-                if (availableQuestions.isEmpty()) {
-                    repository.clearPlayedFiles()
-                    availableQuestions = audioPackage.files
-                }
-
-                // Play 5 (or specified questions per session) sequentially
-                val selectedQuestions = availableQuestions.take(settings.questionsPerSession)
-
-                _uiState.update {
-                    it.copy(
-                        currentPackage = audioPackage,
-                        questions = selectedQuestions,
-                        settings = settings,
-                        sessionState = SessionState.PlayingAudio(0),
-                        isPaused = false
-                    )
-                }
-                
-                currentQuestionIndex = 0
-                playQuestion(0)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _uiState.update { it.copy(sessionState = SessionState.Idle) }
             }
         }
     }
 
-    private fun playQuestion(index: Int) {
-        timerJob?.cancel()
-        releasePlayer()
-
-        val state = _uiState.value
-        if (index >= state.questions.size) {
-            finishSession()
-            return
-        }
-
-        currentQuestionIndex = index
-        _uiState.update {
-            it.copy(
-                sessionState = SessionState.PlayingAudio(index),
-                isPaused = false
-            )
-        }
-
-        val question = state.questions[index]
-        
-        // Mark as played immediately when played
+    private fun downloadFiles(exercise: Exercise) {
         viewModelScope.launch {
-            repository.markFileAsPlayed(question.id)
-        }
-
-        try {
-            mediaPlayer = MediaPlayer().apply {
-                val localPath = question.localPath
-                val mediaUri = if (localPath != null && File(localPath).exists()) {
-                    Uri.fromFile(File(localPath))
-                } else {
-                    Uri.parse(question.audioUrl)
+            _downloadState.value = DownloadState.Downloading
+            repository.downloadExercise(exercise)
+                .onSuccess { files ->
+                    _downloadState.value = DownloadState.Success
+                    _exercise.value = exercise.copy(files = files)
                 }
-                setDataSource(appContext, mediaUri)
-
-                prepareAsync()
-                setOnPreparedListener { mp ->
-                    if (!_uiState.value.isPaused) {
-                        mp.start()
-                    }
+                .onFailure { error ->
+                    _downloadState.value = DownloadState.Error(error.message ?: "خطا در دانلود")
                 }
-                setOnCompletionListener {
-                    // Audio finished -> trigger dynamic pause for practice speaking
-                    startPauseCountdown()
-                }
-                setOnErrorListener { _, _, _ ->
-                    // Fallback in case audio playback crashes on unsupported file format or offline
-                    startPauseCountdown()
-                    true
-                }
-            }
-        } catch (e: Exception) {
-            // Safe fallback to countdown if initialization crashes
-            startPauseCountdown()
         }
     }
 
-    private fun startPauseCountdown() {
-        releasePlayer()
-        timerJob?.cancel()
-        
-        val duration = _uiState.value.settings.pauseDurationSeconds
-        
-        _uiState.update {
-            it.copy(
-                sessionState = SessionState.PracticingPause(currentQuestionIndex, duration),
-                isPaused = false
-            )
-        }
-
-        timerJob = viewModelScope.launch {
-            var remaining = duration
-            while (remaining > 0) {
-                delay(1000)
-                if (!_uiState.value.isPaused) {
-                    remaining--
-                    _uiState.update { state ->
-                        if (state.sessionState is SessionState.PracticingPause) {
-                            state.copy(sessionState = SessionState.PracticingPause(currentQuestionIndex, remaining))
-                        } else {
-                            state
-                        }
-                    }
-                }
-            }
-            // Transition to next question
-            playQuestion(currentQuestionIndex + 1)
-        }
-    }
-
-    fun pauseSession() {
-        if (_uiState.value.isPaused) return
-        
-        _uiState.update { it.copy(isPaused = true) }
-        
-        try {
-            if (mediaPlayer?.isPlaying == true) {
-                mediaPlayer?.pause()
-            }
-        } catch (ignored: Exception) {}
-    }
-
-    fun resumeSession() {
-        if (!_uiState.value.isPaused) return
-        
-        _uiState.update { it.copy(isPaused = false) }
-        
-        try {
-            mediaPlayer?.start()
-        } catch (ignored: Exception) {}
-    }
-
-    fun skipCurrent() {
-        timerJob?.cancel()
-        releasePlayer()
-        
-        val state = _uiState.value
-        val currentState = state.sessionState
-        
-        if (currentState is SessionState.PlayingAudio) {
-            // Skip directly to practice pause
-            startPauseCountdown()
-        } else if (currentState is SessionState.PracticingPause) {
-            // Skip directly to next question
-            playQuestion(currentState.currentQuestionIndex + 1)
-        }
-    }
-
-    fun finishSession() {
-        timerJob?.cancel()
-        releasePlayer()
-        val currentPkgId = _uiState.value.currentPackage?.id
-        if (currentPkgId != null) {
+    fun onFileComplete() {
+        val exercise = _exercise.value ?: return
+        val nextIndex = _currentFileIndex.value + 1
+        if (nextIndex < exercise.files.size) {
+            _currentFileIndex.value = nextIndex
+        } else {
+            // تمرین تمام شد
+            _playbackState.value = PlaybackState.Completed
             viewModelScope.launch {
-                try {
-                    repository.markPackageCompleted(currentPkgId)
-                } catch (ignored: Exception) {}
+                repository.markCompleted(exercise.id)
+                _exercise.value = _exercise.value?.copy(isCompleted = true)
             }
         }
-        _uiState.update {
-            it.copy(sessionState = SessionState.Completed)
-        }
     }
 
-    fun resetSession() {
-        timerJob?.cancel()
-        releasePlayer()
-        _uiState.update {
-            it.copy(
-                sessionState = SessionState.Idle,
-                currentPackage = null,
-                questions = emptyList()
-            )
-        }
-        currentQuestionIndex = 0
-    }
+    fun setPlaying() { _playbackState.value = PlaybackState.Playing }
+    fun setPaused() { _playbackState.value = PlaybackState.Paused }
+    fun setIdle() { _playbackState.value = PlaybackState.Idle }
 
-    private fun releasePlayer() {
-        try {
-            mediaPlayer?.stop()
-        } catch (ignored: Exception) {}
-        mediaPlayer?.release()
-        mediaPlayer = null
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        timerJob?.cancel()
-        releasePlayer()
-    }
-
-    companion object {
-        fun provideFactory(
-            repository: AudioPackageRepository,
-            context: Context
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PlayerViewModel(repository, context.applicationContext) as T
-            }
-        }
+    enum class PlaybackState { Idle, Playing, Paused, Completed }
+    sealed class DownloadState {
+        data object Idle : DownloadState()
+        data object Downloading : DownloadState()
+        data object Success : DownloadState()
+        data class Error(val message: String) : DownloadState()
     }
 }
