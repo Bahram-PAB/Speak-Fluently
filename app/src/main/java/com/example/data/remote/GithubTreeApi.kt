@@ -53,7 +53,7 @@ class GithubTreeApi(private val client: OkHttpClient) {
                 val segments = path.split("/")
                 
                 // Find first numeric segment (folder number)
-                val folderIndex = segments.indexOfFirst { it.matches(Regex("^\d+$")) }
+                val folderIndex = segments.indexOfFirst { it.matches("^\d+$".toRegex()) }
                 if (folderIndex == -1) continue
 
                 val folderName = segments[folderIndex]
