@@ -1,6 +1,6 @@
 package com.example.ui.theme
 
-import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -31,7 +31,6 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = Color(0xFFCAC4D0),
     outline = Color(0xFF938F99),
     outlineVariant = Color(0xFF49454F),
-    shadow = Color.Black,
     scrim = Color.Black,
     inverseSurface = Color(0xFFE6E1E5),
     inverseOnSurface = Color(0xFF313033),
@@ -63,7 +62,6 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF49454F),
     outline = Color(0xFF79747E),
     outlineVariant = Color(0xFFCAC4D0),
-    shadow = Color.Black,
     scrim = Color.Black,
     inverseSurface = Color(0xFF313033),
     inverseOnSurface = Color(0xFFF4EFF4),
@@ -72,13 +70,12 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun SpeakFluentlyTheme(
-    darkTheme: Boolean = false, // RTL فارسی - light theme پیش‌فرض
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
         content = content
     )
 }

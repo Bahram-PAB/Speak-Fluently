@@ -1,6 +1,8 @@
 package com.example.data.repository
 
+import android.app.Application
 import com.example.SyncConfig
+import com.example.SpeakFluentlyApplication
 import com.example.data.download.AudioDownloader
 import com.example.data.local.CompletedPackagesStore
 import com.example.data.local.SyncPreferences
@@ -22,9 +24,6 @@ class AudioExerciseRepository(
 
     private var cachedExercises: List<Exercise> = emptyList()
 
-    /**
-     * Singleton instance for easy access
-     */
     companion object {
         @Volatile private var INSTANCE: AudioExerciseRepository? = null
 
@@ -41,9 +40,6 @@ class AudioExerciseRepository(
         }
     }
 
-    /**
-     * دریافت لیست تمرینها با وضعیت تکمیل
-     */
     fun getExercises(): Flow<List<Exercise>> {
         return combine(
             completedStore.getCompletedExercises()
@@ -59,9 +55,6 @@ class AudioExerciseRepository(
         }
     }
 
-    /**
-     * همگامسازی: خواندن لیست فایلها از GitHub
-     */
     suspend fun sync(): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val exercises = githubApi.fetchExercises()
@@ -73,13 +66,10 @@ class AudioExerciseRepository(
         }
     }
 
-    /**
-     * دانلود فایلهای یک تمرین
-     */
     suspend fun downloadExercise(exercise: Exercise): Result<List<ExerciseFile>> = withContext(Dispatchers.IO) {
         try {
             val downloaded = downloader.downloadExerciseFiles(exercise.files)
-            // آپدیت کش
+            // Update cache
             cachedExercises = cachedExercises.map {
                 if (it.id == exercise.id) it.copy(files = downloaded) else it
             }
@@ -89,36 +79,20 @@ class AudioExerciseRepository(
         }
     }
 
-    /**
-     * علامت گذاری تمرین به عنوان تکمیل شده
-     */
     suspend fun markCompleted(exerciseId: Int) {
         completedStore.markAsCompleted(exerciseId)
     }
 
-    /**
-     * پاکسازی فایلهای قدیمی (بیش از ۷ روز)
-     */
     suspend fun cleanupOldFiles() = withContext(Dispatchers.IO) {
-        // اینجا باید زمان تکمیل رو بگیریم
-        // ساده‌سازی: حذف فایلهای قدیمی بر اساس سن فایل
-        val maxAge = 7 * 24 * 60 * 60 * 1000L
-        val now = System.currentTimeMillis()
-        downloader.cleanupOldFiles(emptyMap(), maxAge)
+        downloader.cleanupOldFiles()
     }
 
-    /**
-     * دریافت زمان آخرین همگامسازی
-     */
     fun getLastSyncTime(): Flow<Long> = syncPrefs.getLastSyncTime()
 
-    /**
-     * مقداردهی اولیه لیست تمرینها (اگر قبلاً sync شده)
-     */
     suspend fun initialize() {
         val lastSync = syncPrefs.getLastSyncTime().first()
         if (lastSync > 0) {
-            sync() // تلاش برای دریافت مجدد
+            sync()
         }
     }
 }

@@ -9,7 +9,6 @@ import com.example.domain.model.ExerciseFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -28,15 +27,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
     fun loadExercise(exerciseId: Int) {
-        val allExercises = repository.getExercises()
         viewModelScope.launch {
-            allExercises.first().collect { exercises ->
-                val exercise = exercises.find { it.id == exerciseId }
-                _exercise.value = exercise
-                _currentFileIndex.value = 0
-                if (exercise != null && !exercise.files.all { it.isDownloaded }) {
-                    downloadFiles(exercise)
-                }
+            val exercises = repository.getExercises().first()
+            val exercise = exercises.find { it.id == exerciseId }
+            _exercise.value = exercise
+            _currentFileIndex.value = 0
+            if (exercise != null && !exercise.files.all { it.isDownloaded }) {
+                downloadFiles(exercise)
             }
         }
     }
@@ -61,7 +58,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (nextIndex < exercise.files.size) {
             _currentFileIndex.value = nextIndex
         } else {
-            // تمرین تمام شد
             _playbackState.value = PlaybackState.Completed
             viewModelScope.launch {
                 repository.markCompleted(exercise.id)
