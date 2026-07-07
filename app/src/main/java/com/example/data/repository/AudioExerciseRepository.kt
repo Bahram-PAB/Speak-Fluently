@@ -41,7 +41,8 @@ class AudioExerciseRepository(
     }
 
     fun getExercises(): Flow<List<Exercise>> {
-        return combine(
+    fun getExercises(): Flow<List<Exercise>> {
+        return combine<List<Int>, List<Exercise>>(
             completedStore.getCompletedExercises()
         ) { completedIds ->
             if (cachedExercises.isEmpty()) {

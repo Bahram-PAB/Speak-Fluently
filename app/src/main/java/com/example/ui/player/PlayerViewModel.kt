@@ -1,4 +1,5 @@
 package com.example.ui.player
+import kotlinx.coroutines.flow.first
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

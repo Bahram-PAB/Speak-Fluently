@@ -34,7 +34,7 @@ class CleanupWorker(
         return try {
             // حذف فایلهای قدیمی (بیش از ۷ روز)
             val maxAge = 7 * 24 * 60 * 60 * 1000L // 7 days in millis
-            downloader.cleanupOldFiles(emptyMap(), maxAge)
+            downloader.cleanupOldFiles(maxAge)
             Result.success()
         } catch (e: Exception) {
             Result.failure()
