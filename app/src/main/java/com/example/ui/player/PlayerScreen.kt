@@ -5,11 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.extended.PlayArrow
-import androidx.compose.material.icons.extended.Pause
-import androidx.compose.material.icons.extended.SkipNext
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,9 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +55,6 @@ fun PlayerScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // وضعیت دانلود
             when (downloadState) {
                 is PlayerViewModel.DownloadState.Downloading -> {
                     CircularProgressIndicator()
@@ -89,7 +83,6 @@ fun PlayerScreen(
             if (currentIndex >= ex.files.size) return@Column
             val currentFile = ex.files[currentIndex]
 
-            // شمارنده پیشرفت
             Text(
                 text = "${currentIndex + 1} / ${ex.files.size}",
                 style = MaterialTheme.typography.headlineSmall,
@@ -98,7 +91,6 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // نام فایل فعلی
             Text(
                 text = currentFile.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -108,12 +100,10 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // دکمه‌های کنترل
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // دکمه تکرار
                 FilledTonalButton(
                     onClick = { viewModel.onFileComplete() },
                     modifier = Modifier.size(64.dp),
@@ -122,7 +112,6 @@ fun PlayerScreen(
                     Icon(Icons.Default.SkipNext, contentDescription = "رد شدن")
                 }
 
-                // دکمه پخش/توقف
                 var isPlaying by remember { mutableStateOf(false) }
                 var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
@@ -137,8 +126,7 @@ fun PlayerScreen(
                             isPlaying = false
                             viewModel.setPaused()
                         } else {
-                            val file = currentFile
-                            val localFile = file.localFile
+                            val localFile = currentFile.localFile
                             if (localFile != null && localFile.exists()) {
                                 mediaPlayer = MediaPlayer().apply {
                                     setDataSource(localFile.absolutePath)
@@ -158,7 +146,7 @@ fun PlayerScreen(
                     modifier = Modifier.size(80.dp)
                 ) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        imageVector = if (isPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "توقف" else "پخش",
                         modifier = Modifier.size(40.dp)
                     )
@@ -167,7 +155,6 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // پیام راهنما
             when (playbackState) {
                 PlayerViewModel.PlaybackState.Completed -> {
                     Card(

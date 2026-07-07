@@ -1,7 +1,6 @@
 package com.example.data.repository
 
 import android.app.Application
-import com.example.SyncConfig
 import com.example.SpeakFluentlyApplication
 import com.example.data.download.AudioDownloader
 import com.example.data.local.CompletedPackagesStore
@@ -11,8 +10,8 @@ import com.example.domain.model.Exercise
 import com.example.domain.model.ExerciseFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class AudioExerciseRepository(
@@ -21,37 +20,28 @@ class AudioExerciseRepository(
     private val completedStore: CompletedPackagesStore,
     private val syncPrefs: SyncPreferences
 ) {
-
     private var cachedExercises: List<Exercise> = emptyList()
 
     companion object {
         @Volatile private var INSTANCE: AudioExerciseRepository? = null
-
         fun getInstance(application: Application): AudioExerciseRepository {
             return INSTANCE ?: synchronized(this) {
                 val container = (application as SpeakFluentlyApplication).container
                 INSTANCE ?: AudioExerciseRepository(
-                    container.githubApi,
-                    container.audioDownloader,
-                    container.completedStore,
-                    container.syncPrefs
+                    container.githubApi, container.audioDownloader,
+                    container.completedStore, container.syncPrefs
                 ).also { INSTANCE = it }
             }
         }
     }
 
     fun getExercises(): Flow<List<Exercise>> {
-    fun getExercises(): Flow<List<Exercise>> {
-        return combine<List<Int>, List<Exercise>>(
-            completedStore.getCompletedExercises()
-        ) { completedIds ->
+        return completedStore.getCompletedExercises().map { completedIds ->
             if (cachedExercises.isEmpty()) {
                 emptyList()
             } else {
                 val completed = completedIds.toSet()
-                cachedExercises.map { exercise ->
-                    exercise.copy(isCompleted = completed.contains(exercise.id))
-                }
+                cachedExercises.map { it.copy(isCompleted = completed.contains(it.id)) }
             }
         }
     }
@@ -70,7 +60,6 @@ class AudioExerciseRepository(
     suspend fun downloadExercise(exercise: Exercise): Result<List<ExerciseFile>> = withContext(Dispatchers.IO) {
         try {
             val downloaded = downloader.downloadExerciseFiles(exercise.files)
-            // Update cache
             cachedExercises = cachedExercises.map {
                 if (it.id == exercise.id) it.copy(files = downloaded) else it
             }
@@ -92,8 +81,6 @@ class AudioExerciseRepository(
 
     suspend fun initialize() {
         val lastSync = syncPrefs.getLastSyncTime().first()
-        if (lastSync > 0) {
-            sync()
-        }
+        if (lastSync > 0) { sync() }
     }
 }

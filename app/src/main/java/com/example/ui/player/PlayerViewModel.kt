@@ -1,15 +1,14 @@
 package com.example.ui.player
-import kotlinx.coroutines.flow.first
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.repository.AudioExerciseRepository
 import com.example.domain.model.Exercise
-import com.example.domain.model.ExerciseFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -30,11 +29,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun loadExercise(exerciseId: Int) {
         viewModelScope.launch {
             val exercises = repository.getExercises().first()
-            val exercise = exercises.find { it.id == exerciseId }
-            _exercise.value = exercise
+            val ex = exercises.find { it.id == exerciseId }
+            _exercise.value = ex
             _currentFileIndex.value = 0
-            if (exercise != null && !exercise.files.all { it.isDownloaded }) {
-                downloadFiles(exercise)
+            if (ex != null && !ex.files.all { it.isDownloaded }) {
+                downloadFiles(ex)
             }
         }
     }
@@ -54,22 +53,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onFileComplete() {
-        val exercise = _exercise.value ?: return
+        val ex = _exercise.value ?: return
         val nextIndex = _currentFileIndex.value + 1
-        if (nextIndex < exercise.files.size) {
+        if (nextIndex < ex.files.size) {
             _currentFileIndex.value = nextIndex
         } else {
             _playbackState.value = PlaybackState.Completed
             viewModelScope.launch {
-                repository.markCompleted(exercise.id)
-                _exercise.value = _exercise.value?.copy(isCompleted = true)
+                repository.markCompleted(ex.id)
+                _exercise.value = ex.copy(isCompleted = true)
             }
         }
     }
 
     fun setPlaying() { _playbackState.value = PlaybackState.Playing }
     fun setPaused() { _playbackState.value = PlaybackState.Paused }
-    fun setIdle() { _playbackState.value = PlaybackState.Idle }
 
     enum class PlaybackState { Idle, Playing, Paused, Completed }
     sealed class DownloadState {
