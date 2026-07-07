@@ -1,78 +1,50 @@
 package com.example.ui.home
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.local.LocalSettingsDataSource
-import com.example.domain.model.AudioFile
-import com.example.domain.model.AudioPackage
-import com.example.domain.repository.AudioPackageRepository
-import com.example.domain.repository.DownloadStatus
+import com.example.data.repository.AudioExerciseRepository
+import com.example.domain.model.Exercise
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class HomeUiState(
-    val packages: List<AudioPackage> = emptyList(),
-    val isLoading: Boolean = true,
-    val downloadStatuses: Map<String, DownloadStatus> = emptyMap(),
-    val completedPackageIds: Set<String> = emptySet()
-)
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = AudioExerciseRepository.getInstance(application)
 
-class HomeViewModel(
-    private val repository: AudioPackageRepository,
-    private val localSettings: LocalSettingsDataSource
-) : ViewModel() {
+    private val _exercises = MutableStateFlow<List<Exercise>>(emptyList())
+    val exercises: StateFlow<List<Exercise>> = _exercises.asStateFlow()
 
-    private val _downloadStatuses = MutableStateFlow<Map<String, DownloadStatus>>(emptyMap())
-    private val _completedPackageIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
-    val uiState: StateFlow<HomeUiState> = combine(
-        repository.getPackages(),
-        _downloadStatuses,
-        _completedPackageIds
-    ) { packages, downloadStatuses, completedIds ->
-        HomeUiState(
-            packages = packages,
-            isLoading = false,
-            downloadStatuses = downloadStatuses,
-            completedPackageIds = completedIds
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState()
-    )
-
-    fun downloadFile(file: AudioFile) {
+    init {
         viewModelScope.launch {
-            repository.downloadFile(file).collect { status ->
-                _downloadStatuses.value = _downloadStatuses.value.toMutableMap().apply {
-                    put(file.id, status)
+            repository.getExercises().collect { exercises ->
+                _exercises.value = exercises
+            }
+        }
+        viewModelScope.launch { repository.initialize() }
+    }
+
+    fun sync() {
+        viewModelScope.launch {
+            _syncState.value = SyncState.Syncing
+            repository.sync()
+                .onSuccess { count ->
+                    _syncState.value = SyncState.Success("همگام‌سازی انجام شد. $count تمرین یافت شد.")
                 }
-            }
+                .onFailure { error ->
+                    _syncState.value = SyncState.Error("خطا در همگام‌سازی: ${error.message}")
+                }
         }
     }
 
-    fun markPackageAsCompleted(packageId: String) {
-        viewModelScope.launch {
-            repository.markPackageCompleted(packageId)
-            _completedPackageIds.value = _completedPackageIds.value + packageId
-        }
-    }
-
-    companion object {
-        fun provideFactory(
-            repository: AudioPackageRepository,
-            localSettings: LocalSettingsDataSource
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HomeViewModel(repository, localSettings) as T
-            }
-        }
+    sealed class SyncState {
+        data object Idle : SyncState()
+        data object Syncing : SyncState()
+        data class Success(val message: String) : SyncState()
+        data class Error(val message: String) : SyncState()
     }
 }

@@ -1,26 +1,30 @@
 package com.example.di
 
-import android.content.Context
-import com.example.data.local.LocalSettingsDataSource
-import com.example.data.remote.RemoteAudioPackageDataSource
-import com.example.data.repository.AudioPackageRepositoryImpl
-import com.example.domain.repository.AudioPackageRepository
+import android.app.Application
+import com.example.data.download.AudioDownloader
+import com.example.data.local.CompletedPackagesStore
+import com.example.data.local.SyncPreferences
+import com.example.data.remote.GithubTreeApi
+import com.example.data.repository.AudioExerciseRepository
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 
-class AppContainer(private val context: Context) {
+class AppContainer(val application: Application) {
+    // Network
+    private val httpClient = OkHttpClient.Builder()
+        .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BASIC))
+        .build()
 
-    val localSettingsDataSource: LocalSettingsDataSource by lazy {
-        LocalSettingsDataSource(context.applicationContext)
-    }
+    val githubApi = GithubTreeApi(httpClient)
+    val audioDownloader = AudioDownloader(application, httpClient)
+    val completedStore = CompletedPackagesStore(application)
+    val syncPrefs = SyncPreferences(application)
 
-    val remoteAudioPackageDataSource: RemoteAudioPackageDataSource by lazy {
-        RemoteAudioPackageDataSource(context.applicationContext)
-    }
-
-    val audioPackageRepository: AudioPackageRepository by lazy {
-        AudioPackageRepositoryImpl(
-            context.applicationContext,
-            localSettingsDataSource,
-            remoteAudioPackageDataSource
-        )
-    }
+    // Repository (Singleton)
+    val exerciseRepository = AudioExerciseRepository(
+        githubApi = githubApi,
+        downloader = audioDownloader,
+        completedStore = completedStore,
+        syncPrefs = syncPrefs
+    )
 }

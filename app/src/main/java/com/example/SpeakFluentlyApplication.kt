@@ -4,7 +4,6 @@ import android.app.Application
 import com.example.di.AppContainer
 
 class SpeakFluentlyApplication : Application() {
-    
     lateinit var container: AppContainer
 
     override fun onCreate() {
