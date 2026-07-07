@@ -45,11 +45,11 @@ class GithubTreeApi(private val client: OkHttpClient) {
                     !lowerPath.endsWith(".m4a") && !lowerPath.endsWith(".ogg")) continue
 
                 val segments = path.split("/")
-                if (segments.size != 3) continue
-                if (segments[0] != pathPrefix) continue
+                if (segments.size < 4) continue
+                if (!path.startsWith(pathPrefix)) continue
 
-                val folderName = segments[1]
-                val fileName = segments[2]
+                val folderName = segments[2]
+                val fileName = segments[3]
 
                 val folderNum = folderName.toIntOrNull() ?: continue
                 val fileNum = extractFileNumber(fileName) ?: continue
