@@ -32,6 +32,10 @@ class GithubTreeApi(private val client: OkHttpClient) {
 
             val json = JSONObject(bodyString)
             val treeArray = json.optJSONArray("tree") ?: return emptyList()
+            val truncated = json.optBoolean("truncated", false)
+            if (truncated) {
+                throw IOException("GitHub tree response truncated - too many files")
+            }
 
             val folderMap = mutableMapOf<Int, MutableList<ExerciseFile>>()
 
@@ -44,12 +48,13 @@ class GithubTreeApi(private val client: OkHttpClient) {
                 if (!lowerPath.endsWith(".wav") && !lowerPath.endsWith(".mp3") &&
                     !lowerPath.endsWith(".m4a") && !lowerPath.endsWith(".ogg")) continue
 
-                val segments = path.split("/")
-                if (segments.size < 4) continue
-                if (!path.startsWith(pathPrefix)) continue
+                if (!path.startsWith("$pathPrefix/")) continue
 
-                val folderName = segments[2]
-                val fileName = segments[3]
+                val segments = path.removePrefix("$pathPrefix/").split("/")
+                if (segments.size != 2) continue
+
+                val folderName = segments[0]
+                val fileName = segments[1]
 
                 val folderNum = folderName.toIntOrNull() ?: continue
                 val fileNum = extractFileNumber(fileName) ?: continue
@@ -77,19 +82,15 @@ class GithubTreeApi(private val client: OkHttpClient) {
         }
     }
 
+    /** Extract number from filename like "speech-1.wav" -> 1, "01_hello.wav" -> 1 */
     private fun extractFileNumber(fileName: String): Int? {
-        val nameWithoutExt = fileName.substringBeforeLast(".")
-        val parts = nameWithoutExt.split("_")
-        return parts.firstOrNull()?.toIntOrNull()
+        val match = Regex("([0-9]+)").find(fileName)
+        return match?.value?.toIntOrNull()
     }
 
+    /** Extract title from filename like "speech-1.wav" -> "speech 1", "01_hello.wav" -> "hello" */
     private fun extractTitle(fileName: String): String {
         val nameWithoutExt = fileName.substringBeforeLast(".")
-        val parts = nameWithoutExt.split("_", limit = 2)
-        return if (parts.size >= 2) {
-            parts[1].replace("_", " ").replace("-", " ")
-        } else {
-            nameWithoutExt.replace("_", " ").replace("-", " ")
-        }
+        return nameWithoutExt.replace("-", " ").replace("_", " ")
     }
 }
