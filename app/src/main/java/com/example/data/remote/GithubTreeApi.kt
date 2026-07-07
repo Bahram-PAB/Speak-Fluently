@@ -27,7 +27,7 @@ class GithubTreeApi(private val client: OkHttpClient) {
         
         try {
             if (!response.isSuccessful) {
-                throw IOException("GitHub API Error: ${response.code} ${response.message}")
+                throw IOException("GitHub API failed: ${response.code} ${response.message}")
             }
 
             val bodyString = response.body?.string() ?: return emptyList()
@@ -40,33 +40,30 @@ class GithubTreeApi(private val client: OkHttpClient) {
 
             for (i in 0 until treeArray.length()) {
                 val item = treeArray.getJSONObject(i)
-                if (item.optString("type") != "blob") continue
+                if (item.optString("type", "") != "blob") continue
 
-                val fullPath = item.optString("path", "")
-                val lowerPath = fullPath.lowercase()
+                val path = item.optString("path", "")
+                val lowerPath = path.lowercase()
 
-                // Only audio files
-                if (!lowerPath.endsWith(".wav") && !lowerPath.endsWith(".mp3") && 
-                    !lowerPath.endsWith(".m4a") && !lowerPath.endsWith(".ogg")) {
-                    continue
-                }
+                if (!lowerPath.endsWith(".wav") && !lowerPath.endsWith(".mp3") &&
+                    !lowerPath.endsWith(".m4a") && !lowerPath.endsWith(".ogg")) continue
 
-                // Must start with pathPrefix
-                if (!fullPath.startsWith(pathPrefix)) continue
+                if (!path.startsWith(pathPrefix)) continue
 
-                val segments = fullPath.split("/")
+                val segments = path.split("/")
+                
+                // Find first numeric segment (folder number)
+                val folderIndex = segments.indexOfFirst { it.matches(Regex("^\d+$")) }
+                if (folderIndex == -1) continue
 
-                // Find first segment that is a pure number (folder number)
-                val folderSegment = segments.firstOrNull { it.matches(Regex("^\\d+$")) } 
-                    ?: continue
-
-                val folderNum = folderSegment.toIntOrNull() ?: continue
-
+                val folderName = segments[folderIndex]
                 val fileName = segments.last()
-                val fileNum = extractFileNumber(fileName) ?: continue
-                val title = extractTitle(fileName)
 
-                val audioUrl = "https://raw.githubusercontent.com/$repo/$branch/$fullPath"
+                val folderNum = folderName.toIntOrNull() ?: continue
+                val fileNum = extractFileNumber(fileName) ?: continue
+
+                val title = extractTitle(fileName)
+                val audioUrl = "https://raw.githubusercontent.com/$repo/$branch/$path"
 
                 val exerciseFile = ExerciseFile(
                     id = fileNum,
@@ -77,7 +74,6 @@ class GithubTreeApi(private val client: OkHttpClient) {
                 folderMap.getOrPut(folderNum) { mutableListOf() }.add(exerciseFile)
             }
 
-            // Convert to sorted list
             return folderMap.toSortedMap().map { (folderNum, files) ->
                 Exercise(
                     id = folderNum,
