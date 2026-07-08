@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.home.HomeScreen
 import com.example.ui.player.PlayerScreen
+import com.example.ui.settings.SettingsScreen
 import com.example.ui.theme.SpeakFluentlyTheme
 
 class MainActivity : ComponentActivity() {
@@ -32,6 +33,9 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 onNavigateToExercise = { exerciseId ->
                                     navController.navigate("player/$exerciseId")
+                                },
+                                onNavigateToSettings = {
+                                    navController.navigate("settings")
                                 }
                             )
                         }
@@ -40,6 +44,11 @@ class MainActivity : ComponentActivity() {
                             PlayerScreen(
                                 exerciseId = exerciseId,
                                 onBackToHome = { navController.popBackStack() }
+                            )
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                onBack = { navController.popBackStack() }
                             )
                         }
                     }
