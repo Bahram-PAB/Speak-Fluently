@@ -53,7 +53,6 @@ class GithubTreeApi(private val client: OkHttpClient) {
                 val segments = path.split("/")
                 
                 // Find first numeric segment (folder number)
-                // Use a character range or just check digits, avoiding backslash issues
                 val folderIndex = segments.indexOfFirst { segment -> segment.all { it in '0'..'9' } && segment.isNotEmpty() }
                 if (folderIndex == -1) continue
 
@@ -88,19 +87,26 @@ class GithubTreeApi(private val client: OkHttpClient) {
         }
     }
 
+    /** Extract first number from filename: "speech-1.wav" -> 1, "01_hello.wav" -> 1 */
     private fun extractFileNumber(fileName: String): Int? {
         val nameWithoutExt = fileName.substringBeforeLast(".")
-        val parts = nameWithoutExt.split("_")
-        return parts.firstOrNull()?.toIntOrNull()
+        // Find first sequence of digits
+        for (i in nameWithoutExt.indices) {
+            if (nameWithoutExt[i].isDigit()) {
+                val end = nameWithoutExt.indexOfFirstOrNull(i + 1) { !it.isDigit() } ?: nameWithoutExt.length
+                return nameWithoutExt.substring(i, end).toIntOrNull()
+            }
+        }
+        return null
     }
 
+    /** Extract title: "speech-1.wav" -> "speech 1", "01_hello.wav" -> "hello" */
     private fun extractTitle(fileName: String): String {
         val nameWithoutExt = fileName.substringBeforeLast(".")
-        val parts = nameWithoutExt.split("_", limit = 2)
-        return if (parts.size >= 2) {
-            parts[1].replace("_", " ").replace("-", " ")
-        } else {
-            nameWithoutExt.replace("_", " ").replace("-", " ")
-        }
+        // Remove leading numbers and separators
+        val cleaned = nameWithoutExt.replace(Regex("^[0-9]+[_-]*"), "")
+            .replace("_", " ")
+            .replace("-", " ")
+        return if (cleaned.isNotBlank()) cleaned else nameWithoutExt.replace("_", " ").replace("-", " ")
     }
 }
