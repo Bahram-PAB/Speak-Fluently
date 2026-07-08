@@ -1,4 +1,5 @@
 package com.example.data.repository
+import kotlinx.coroutines.flow.first
 
 import android.app.Application
 import com.example.SpeakFluentlyApplication
