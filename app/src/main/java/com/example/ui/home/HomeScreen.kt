@@ -24,6 +24,7 @@ import com.example.domain.model.Exercise
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onNavigateToSettings: () -> Unit = {},
     onNavigateToExercise: (Int) -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
