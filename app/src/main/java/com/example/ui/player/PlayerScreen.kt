@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,10 +30,51 @@ fun PlayerScreen(
     val currentIndex by viewModel.currentFileIndex.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
     val downloadState by viewModel.downloadState.collectAsState()
+    val intervalRemaining by viewModel.intervalRemaining.collectAsState()
+    val isIntervalActive by viewModel.isIntervalActive.collectAsState()
+    val autoPlaySignal by viewModel.autoPlaySignal.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(exerciseId) {
         viewModel.loadExercise(exerciseId)
+    }
+
+    // MediaPlayer state
+    var isPlaying by remember { mutableStateOf(false) }
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+
+    // Get current file
+    val ex = exercise
+    val currentFile = ex?.files?.getOrNull(currentIndex)
+
+    // Auto-play: when autoPlaySignal changes and interval is done, start playing
+    LaunchedEffect(autoPlaySignal) {
+        if (autoPlaySignal > 0 && currentFile != null) {
+            val localFile = currentFile.localFile
+            if (localFile != null && localFile.exists()) {
+                mediaPlayer?.release()
+                mediaPlayer = MediaPlayer().apply {
+                    setDataSource(localFile.absolutePath)
+                    prepare()
+                    start()
+                    setOnCompletionListener {
+                        isPlaying = false
+                        viewModel.onFileComplete()
+                    }
+                }
+                isPlaying = true
+                viewModel.setPlaying()
+            }
+        }
+    }
+
+    // Cleanup on file change or dispose
+    DisposableEffect(currentFile) {
+        onDispose {
+            mediaPlayer?.release()
+            mediaPlayer = null
+            isPlaying = false
+        }
     }
 
     Scaffold(
@@ -40,7 +82,11 @@ fun PlayerScreen(
             TopAppBar(
                 title = { Text(exercise?.name ?: "تمرین") },
                 navigationIcon = {
-                    IconButton(onClick = onBackToHome) {
+                    IconButton(onClick = {
+                        mediaPlayer?.release()
+                        mediaPlayer = null
+                        onBackToHome()
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
@@ -55,6 +101,7 @@ fun PlayerScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Download state
             when (downloadState) {
                 is PlayerViewModel.DownloadState.Downloading -> {
                     CircularProgressIndicator()
@@ -79,10 +126,42 @@ fun PlayerScreen(
                 else -> {}
             }
 
-            val ex = exercise ?: return@Column
-            if (currentIndex >= ex.files.size) return@Column
-            val currentFile = ex.files[currentIndex]
+            if (ex == null || currentFile == null) return@Column
 
+            // Interval timer countdown card
+            if (isIntervalActive) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = "تایمر",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "$intervalRemaining ثانیه تا فایل بعدی...",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // File counter
             Text(
                 text = "${currentIndex + 1} / ${ex.files.size}",
                 style = MaterialTheme.typography.headlineSmall,
@@ -91,6 +170,7 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // File title
             Text(
                 text = currentFile.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -100,27 +180,31 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
+            // Controls
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Skip button
                 FilledTonalButton(
-                    onClick = { viewModel.onFileComplete() },
+                    onClick = {
+                        mediaPlayer?.release()
+                        mediaPlayer = null
+                        isPlaying = false
+                        viewModel.onFileComplete()
+                    },
                     modifier = Modifier.size(64.dp),
-                    shape = CircleShape
+                    shape = CircleShape,
+                    enabled = !isIntervalActive
                 ) {
                     Icon(Icons.Default.SkipNext, contentDescription = "رد شدن")
                 }
 
-                var isPlaying by remember { mutableStateOf(false) }
-                var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-
-                DisposableEffect(currentFile) {
-                    onDispose { mediaPlayer?.release(); mediaPlayer = null }
-                }
-
+                // Play/Pause button
                 LargeFloatingActionButton(
                     onClick = {
+                        if (isIntervalActive) return@LargeFloatingActionButton
+
                         if (isPlaying) {
                             mediaPlayer?.pause()
                             isPlaying = false
@@ -128,6 +212,7 @@ fun PlayerScreen(
                         } else {
                             val localFile = currentFile.localFile
                             if (localFile != null && localFile.exists()) {
+                                mediaPlayer?.release()
                                 mediaPlayer = MediaPlayer().apply {
                                     setDataSource(localFile.absolutePath)
                                     prepare()
@@ -155,6 +240,7 @@ fun PlayerScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
+            // Status
             when (playbackState) {
                 PlayerViewModel.PlaybackState.Completed -> {
                     Card(
@@ -172,7 +258,8 @@ fun PlayerScreen(
                 }
                 else -> {
                     Text(
-                        text = "گوش دهید، تکرار کنید",
+                        text = if (isIntervalActive) "فایل بعدی به صورت خودکار پخش می‌شود..."
+                               else "گوش دهید، تکرار کنید",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )

@@ -3,8 +3,10 @@ package com.example.ui.player
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.local.SettingsStore
 import com.example.data.repository.AudioExerciseRepository
 import com.example.domain.model.Exercise
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.launch
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AudioExerciseRepository.getInstance(application)
+    private val settingsStore = SettingsStore(application)
 
     private val _exercise = MutableStateFlow<Exercise?>(null)
     val exercise: StateFlow<Exercise?> = _exercise
@@ -25,6 +28,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+
+    // Interval timer state
+    private val _intervalRemaining = MutableStateFlow(0)
+    val intervalRemaining: StateFlow<Int> = _intervalRemaining.asStateFlow()
+
+    private val _isIntervalActive = MutableStateFlow(false)
+    val isIntervalActive: StateFlow<Boolean> = _isIntervalActive.asStateFlow()
+
+    // Signal for PlayerScreen to auto-play the next file
+    private val _autoPlaySignal = MutableStateFlow(0)
+    val autoPlaySignal: StateFlow<Int> = _autoPlaySignal.asStateFlow()
 
     fun loadExercise(exerciseId: Int) {
         viewModelScope.launch {
@@ -55,9 +69,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun onFileComplete() {
         val ex = _exercise.value ?: return
         val nextIndex = _currentFileIndex.value + 1
+
         if (nextIndex < ex.files.size) {
-            _currentFileIndex.value = nextIndex
+            // Start interval countdown, then auto-play next file
+            startIntervalThenPlay(nextIndex)
         } else {
+            // Last file completed
             _playbackState.value = PlaybackState.Completed
             viewModelScope.launch {
                 repository.markCompleted(ex.id)
@@ -66,8 +83,28 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun startIntervalThenPlay(nextIndex: Int) {
+        viewModelScope.launch {
+            val interval = settingsStore.getInterval().first()
+            _isIntervalActive.value = true
+
+            // Countdown
+            for (i in interval downTo 1) {
+                _intervalRemaining.value = i
+                delay(1000)
+            }
+            _intervalRemaining.value = 0
+            _isIntervalActive.value = false
+
+            // Move to next file and signal auto-play
+            _currentFileIndex.value = nextIndex
+            _autoPlaySignal.value = _autoPlaySignal.value + 1
+        }
+    }
+
     fun setPlaying() { _playbackState.value = PlaybackState.Playing }
     fun setPaused() { _playbackState.value = PlaybackState.Paused }
+    fun setIdle() { _playbackState.value = PlaybackState.Idle }
 
     enum class PlaybackState { Idle, Playing, Paused, Completed }
     sealed class DownloadState {
