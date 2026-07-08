@@ -10,11 +10,10 @@ import com.example.domain.model.Exercise
 import com.example.domain.model.ExerciseFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AudioExerciseRepository(
@@ -23,9 +22,9 @@ class AudioExerciseRepository(
     private val completedStore: CompletedPackagesStore,
     private val syncPrefs: SyncPreferences
 ) {
-    // Use MutableStateFlow to hold cached exercises and emit changes
-    private val _exercises = MutableStateFlow<List<Exercise>>(emptyList())
-    val exercises = _exercises.asStateFlow()
+    // Mutable state for cached exercises - emits on every update
+    private val _cachedExercises = MutableStateFlow<List<Exercise>>(emptyList())
+    val cachedExercises: StateFlow<List<Exercise>> = _cachedExercises
 
     companion object {
         @Volatile private var INSTANCE: AudioExerciseRepository? = null
@@ -40,27 +39,21 @@ class AudioExerciseRepository(
         }
     }
 
-    fun getExercises(): kotlinx.coroutines.flow.StateFlow<List<Exercise>> {
-        // Combine cached exercises with completed status
+    // Combine cached exercises with completed status
+    fun getExercises(): kotlinx.coroutines.flow.Flow<List<Exercise>> {
         val completedFlow = completedStore.getCompletedExercises()
             .map { it.toSet() }
             .distinctUntilChanged()
         
-        return combine(_exercises, completedFlow) { exercises, completed ->
+        return combine(_cachedExercises, completedFlow) { exercises, completed ->
             exercises.map { it.copy(isCompleted = completed.contains(it.id)) }
-        }
-            .distinctUntilChanged()
-            .stateIn(
-                scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main),
-                started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(),
-                initialValue = emptyList()
-            )
+        }.distinctUntilChanged()
     }
 
     suspend fun sync(): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val exercises = githubApi.fetchExercises()
-            _exercises.value = exercises  // This triggers the flow update
+            _cachedExercises.value = exercises
             syncPrefs.setLastSyncTime(System.currentTimeMillis())
             Result.success(exercises.size)
         } catch (e: Exception) {
@@ -71,7 +64,7 @@ class AudioExerciseRepository(
     suspend fun downloadExercise(exercise: Exercise): Result<List<ExerciseFile>> = withContext(Dispatchers.IO) {
         try {
             val downloaded = downloader.downloadExerciseFiles(exercise.files)
-            _exercises.value = _exercises.value.map {
+            _cachedExercises.value = _cachedExercises.value.map {
                 if (it.id == exercise.id) it.copy(files = downloaded) else it
             }
             Result.success(downloaded)
