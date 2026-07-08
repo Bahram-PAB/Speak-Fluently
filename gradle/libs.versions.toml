@@ -35,7 +35,7 @@ okhttp = "4.10.0"
 moshiKotlin = "1.15.2"
 moshiKotlinCodegen = "1.15.2"
 datastorePreferences = "1.1.7"
-datastorePreferencesRx = { group = "androidx.datastore", name = "datastore-preferences-rxjava3", version.ref = "datastorePreferences" }
+datastore-preferences-rx = { group = "androidx.datastore", name = "datastore-preferences-rxjava3", version.ref = "datastorePreferences" }
 robolectric = "4.16.1"
 hilt = "2.51.1"
 hiltNavigationCompose = "1.2.0"
