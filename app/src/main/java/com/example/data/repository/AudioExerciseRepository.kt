@@ -1,5 +1,4 @@
 package com.example.data.repository
-import kotlinx.coroutines.flow.first
 
 import android.app.Application
 import com.example.SpeakFluentlyApplication
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -40,14 +40,19 @@ class AudioExerciseRepository(
         }
     }
 
-    // Combine cached exercises with completed status
+    // Combine cached exercises with completed status and locked status
     fun getExercises(): kotlinx.coroutines.flow.Flow<List<Exercise>> {
         val completedFlow = completedStore.getCompletedExercises()
             .map { it.toSet() }
             .distinctUntilChanged()
         
         return combine(_cachedExercises, completedFlow) { exercises, completed ->
-            exercises.map { it.copy(isCompleted = completed.contains(it.id)) }
+            // Determine locked state: first exercise always unlocked; otherwise unlocked if previous is completed
+            exercises.mapIndexed { index, ex ->
+                val isCompleted = completed.contains(ex.id)
+                val isLocked = index > 0 && !completed.contains(exercises[index - 1].id)
+                ex.copy(isCompleted = isCompleted, isLocked = isLocked)
+            }
         }.distinctUntilChanged()
     }
 

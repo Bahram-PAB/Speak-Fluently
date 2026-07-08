@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Settings
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -112,19 +114,31 @@ fun HomeScreen(
 
 @Composable
 fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
+    // Green for completed, surface for unlocked, muted for locked
+    val containerColor = when {
+        exercise.isCompleted -> Color(0xFFE8F5E9) // Light green
+        exercise.isLocked -> MaterialTheme.colorScheme.surface
+        else -> MaterialTheme.colorScheme.surface
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = !exercise.isLocked) { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !exercise.isLocked) { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (exercise.isCompleted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = if (exercise.isCompleted) {
+            androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF4CAF50))
+        } else {
+            null
+        }
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = when {
                     exercise.isCompleted -> Icons.Default.CheckCircle
                     exercise.isLocked -> Icons.Default.Lock
-                    else -> Icons.Default.Lock
+                    else -> Icons.Default.LockOpen
                 },
                 contentDescription = when {
                     exercise.isCompleted -> "تکمیل شده"
@@ -132,19 +146,39 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
                     else -> "باز"
                 },
                 tint = when {
-                    exercise.isCompleted -> MaterialTheme.colorScheme.primary
+                    exercise.isCompleted -> Color(0xFF4CAF50) // Green
                     exercise.isLocked -> MaterialTheme.colorScheme.outline
-                    else -> MaterialTheme.colorScheme.secondary
+                    else -> MaterialTheme.colorScheme.primary
                 },
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = exercise.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = "${exercise.files.size} فایل صوتی", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text(
+                    text = exercise.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${exercise.files.size} فایل صوتی",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (exercise.isCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline
+                )
             }
-            if (!exercise.isLocked) {
-                Text(text = "→", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.outline)
+            // Status indicator: arrow for unlocked, lock icon for locked (visual cue already on left)
+            if (exercise.isCompleted) {
+                Text(
+                    text = "✓",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFF4CAF50),
+                    fontWeight = FontWeight.Bold
+                )
+            } else if (!exercise.isLocked) {
+                Text(
+                    text = "→",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
         }
     }

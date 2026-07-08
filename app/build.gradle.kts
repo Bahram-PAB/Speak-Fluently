@@ -13,14 +13,31 @@ android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
+  // Auto-generate version code from git commit count + build number
+  def getVersionCode = {
+    def code = 1
+    try {
+      def gitCount = "git rev-list --count HEAD".execute().text.trim().toInteger()
+      code = gitCount
+    } catch (e) {
+      // fallback
+    }
+    return code
+  }
+
   defaultConfig {
     applicationId = "com.aistudio.speakfluently.lzvywq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
+    versionCode = getVersionCode()
     versionName = "1.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    // Expose version info to BuildConfig
+    buildConfigField "String", "VERSION_NAME", "\"${versionName}\""
+    buildConfigField "int", "VERSION_CODE", "${getVersionCode()}"
+    buildConfigField "String", "GIT_COMMIT", "\"${("git rev-parse --short HEAD".execute().text.trim())}\""
+    buildConfigField "String", "BUILD_TIME", "\"${new Date().format('yyyy-MM-dd HH:mm')}\""
   }
 
   lint {
@@ -87,7 +104,6 @@ googleServices {
   missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN
 }
 
-
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
@@ -148,6 +164,6 @@ dependencies {
   androidTestImplementation(libs.androidx.runner)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
-  "ksp"(libs.androidx.room.compiler)
+  "ksp"(libs"sp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
