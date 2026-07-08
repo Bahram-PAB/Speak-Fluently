@@ -90,12 +90,16 @@ class GithubTreeApi(private val client: OkHttpClient) {
     /** Extract first number from filename: "speech-1.wav" -> 1, "01_hello.wav" -> 1 */
     private fun extractFileNumber(fileName: String): Int? {
         val nameWithoutExt = fileName.substringBeforeLast(".")
-        // Find first sequence of digits
-        for (i in nameWithoutExt.indices) {
+        var i = 0
+        while (i < nameWithoutExt.length) {
             if (nameWithoutExt[i].isDigit()) {
-                val end = nameWithoutExt.indexOfFirstOrNull(i + 1) { !it.isDigit() } ?: nameWithoutExt.length
+                var end = i
+                while (end < nameWithoutExt.length && nameWithoutExt[end].isDigit()) {
+                    end++
+                }
                 return nameWithoutExt.substring(i, end).toIntOrNull()
             }
+            i++
         }
         return null
     }
@@ -103,10 +107,9 @@ class GithubTreeApi(private val client: OkHttpClient) {
     /** Extract title: "speech-1.wav" -> "speech 1", "01_hello.wav" -> "hello" */
     private fun extractTitle(fileName: String): String {
         val nameWithoutExt = fileName.substringBeforeLast(".")
-        // Remove leading numbers and separators
-        val cleaned = nameWithoutExt.replace(Regex("^[0-9]+[_-]*"), "")
+        val cleaned = nameWithoutExt
             .replace("_", " ")
             .replace("-", " ")
-        return if (cleaned.isNotBlank()) cleaned else nameWithoutExt.replace("_", " ").replace("-", " ")
+        return cleaned.trim()
     }
 }
