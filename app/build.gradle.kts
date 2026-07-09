@@ -41,7 +41,7 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
     buildConfigField("String", "VERSION_NAME", "\"${versionName}\"")
-    buildConfigField("int", "VERSION_CODE", "${versionCode}")
+    buildConfigField("String", "VERSION_CODE", "\"${versionCode}\"")
     buildConfigField("String", "GIT_COMMIT", "\"${gitShortHash()}\"")
     buildConfigField("String", "BUILD_TIME", "\"${java.time.LocalDateTime.now().toString().substring(0, 16)}\"")
   }
