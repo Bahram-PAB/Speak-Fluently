@@ -9,35 +9,41 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+fun gitCommitCount(): Int {
+  return try {
+    val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+      .directory(rootDir)
+      .start()
+    process.inputStream.bufferedReader().readText().trim().toInt()
+  } catch (_: Exception) { 1 }
+}
+
+fun gitShortHash(): String {
+  return try {
+    val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
+      .directory(rootDir)
+      .start()
+    process.inputStream.bufferedReader().readText().trim()
+  } catch (_: Exception) { "unknown" }
+}
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
-
-  // Auto-generate version code from git commit count + build number
-  def getVersionCode = {
-    def code = 1
-    try {
-      def gitCount = "git rev-list --count HEAD".execute().text.trim().toInteger()
-      code = gitCount
-    } catch (e) {
-      // fallback
-    }
-    return code
-  }
 
   defaultConfig {
     applicationId = "com.aistudio.speakfluently.lzvywq"
     minSdk = 24
     targetSdk = 36
-    versionCode = getVersionCode()
+    versionCode = gitCommitCount()
     versionName = "1.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    // Expose version info to BuildConfig
-    buildConfigField "String", "VERSION_NAME", "\"${versionName}\""
-    buildConfigField "int", "VERSION_CODE", "${getVersionCode()}"
-    buildConfigField "String", "GIT_COMMIT", "\"${("git rev-parse --short HEAD".execute().text.trim())}\""
-    buildConfigField "String", "BUILD_TIME", "\"${new Date().format('yyyy-MM-dd HH:mm')}\""
+
+    buildConfigField("String", "VERSION_NAME", "\"${versionName}\"")
+    buildConfigField("int", "VERSION_CODE", "${versionCode}")
+    buildConfigField("String", "GIT_COMMIT", "\"${gitShortHash()}\"")
+    buildConfigField("String", "BUILD_TIME", "\"${java.time.LocalDateTime.now().toString().substring(0, 16)}\"")
   }
 
   lint {
@@ -93,8 +99,6 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
@@ -104,18 +108,11 @@ googleServices {
   missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN
 }
 
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
-  // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.fragment)
-  // implementation(libs.androidx.camera.camera2)
-  // implementation(libs.androidx.camera.core)
-  // implementation(libs.androidx.camera.lifecycle)
-  // implementation(libs.androidx.camera.view)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)
@@ -130,7 +127,6 @@ dependencies {
   implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
-  // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
   implementation(libs.firebase.appcheck.recaptcha)
@@ -139,13 +135,8 @@ dependencies {
   implementation(libs.logging.interceptor)
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
-  // implementation(libs.play.services.location)
   implementation(libs.retrofit)
-
-  // WorkManager
   implementation(libs.androidx.work.runtime.ktx)
-
-  // Media3 (ExoPlayer)
   implementation(libs.androidx.media3.exoplayer)
   implementation(libs.androidx.media3.ui)
   testImplementation(libs.androidx.compose.ui.test.junit4)
@@ -164,6 +155,6 @@ dependencies {
   androidTestImplementation(libs.androidx.runner)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
-  "ksp"(libs"sp"(libs.androidx.room.compiler)
+  "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
