@@ -1,21 +1,143 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🗣️ Speak-Fluently
 
-# Run and deploy your AI Studio app
+اپلیکشن تمرین مکالمه روزانه برای یادگیری صحبت کردن. هر روز ۵ فایل صوتی گوش بده، تکرار کن و مهارت صحبت کردنت رو تقویت کن.
 
-This contains everything you need to run your app locally.
+## ✨ امکانات
 
-View your app in AI Studio: https://ai.studio/apps/10570c03-1b8b-415a-869b-ab42fbff78d8
+- 📅 ۴۰ تمرین روزانه (هر تمرین ۵ فایل صوتی)
+- ⏱️ تایمر انتظار بین فایل‌ها (۲۰، ۳۰، ۴۵، ۶۰ ثانیه)
+- 🔓 قفل‌گشایی زنجیره‌ای (هر تمرین بعد از اتمام تمرین قبلی باز می‌شه)
+- 🟢 نشانگر سبز برای تمرین‌های تکمیل شده
+- 🌐 پشتیبانی RTL برای متن‌های فارسی
+- 📱 رابط کاربری Material 3
 
-## Run Locally
+---
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+## 🔧 راهنمای تغییر آدرس هاست صوتی
 
+فایل‌های صوتی از یک هاست شخصی دانلود می‌شن. برای تغییر آدرس:
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device..
+### فایل: `app/src/main/java/com/example/SyncConfig.kt`
+
+```kotlin
+object SyncConfig {
+    // ====== فقط این خط رو تغییر بده ======
+    const val HOST_BASE_URL = "https://your-host.com/audio"
+    // =====================================
+}
+```
+
+بعد از تغییر، بیلد جدید بگیر.
+
+---
+
+## 📦 ساختار فایل‌ها روی هاست
+
+```
+https://your-host.com/audio/
+├── index.json                    ← فایل فهرست (اجباری)
+├── daily/
+│   ├── 1/
+│   │   ├── hello.wav             ← هر نام فایلی آزاد
+│   │   ├── question-1.mp3        ← هر فرمتی قبول
+│   │   └── ...
+│   ├── 2/
+│   └── ...
+└── 40/
+```
+
+### فرمت `index.json`:
+
+```json
+{
+  "exercises": [
+    {
+      "id": 1,
+      "name": "تمرین روز ۱",
+      "files": [
+        {"id": 1, "title": "سوال ۱", "url": "https://your-host.com/audio/daily/1/hello.wav"},
+        {"id": 2, "title": "سوال ۲", "url": "https://your-host.com/audio/daily/2/question-1.mp3"}
+      ]
+    }
+  ]
+}
+```
+
+> ⚠️ **نام فایل‌ها:** هر نام و فرمتی آزاد است (wav, mp3, m4a, ogg, flac)
+
+---
+
+## 🛠️ تولید index.json
+
+### روش ۱: ابزار HTML (بدون نیاز به نصب) ⭐
+
+1. فایل `tools/generate_index.html` رو دانلود کن
+2. در مرورگر (Chrome/Firefox) باز کن
+3. آدرس هاستت رو وارد کن
+4. روی دکمه 📁 کلیک و فولدر صوتی‌ها رو انتخاب کن
+5. روی دکمه ⚡ کلیک → `index.json` تولید میشه
+6. فایل رو با 💾 دانلود کن
+7. `index.json` + فایل‌های صوتی رو روی هاست آپلود کن
+
+### روش ۲: اسکریپت پایتون
+
+```bash
+python tools/generate_index_json.py /path/to/audio https://your-host.com/audio
+```
+
+خروجی: فایل `index.json` در پوشه جاری
+
+---
+
+## 🏗️ بیلد و نصب
+
+این پروژه فقط از طریق **GitHub Actions** بیلد میشه:
+
+1. کامیت کن و پوش کن
+2. بیلد خودکار استارت میشه
+3. فایل APK از صفحه Actions دانلود کن
+
+---
+
+## 📁 ساختار پروژه
+
+```
+app/src/main/java/com/example/
+├── SyncConfig.kt                          ← تنظیمات هاست (اینجا رو ویرایش کن)
+├── data/
+│   ├── remote/GithubTreeApi.kt            ← خواندن index.json از هاست
+│   ├── download/AudioDownloader.kt        ← دانلود فایل‌های صوتی
+│   ├── repository/AudioExerciseRepository.kt ← مدیریت تمرین‌ها
+│   └── local/
+│       ├── SettingsStore.kt               ← ذخیره تنظیمات
+│       └── CompletedPackagesStore.kt      ← وضعیت تکمیل تمرین‌ها
+└── ui/
+    ├── home/HomeScreen.kt                 ← صفحه اصلی (لیست تمرین‌ها)
+    ├── player/PlayerScreen.kt             ← صفحه پخش صوت
+    └── settings/SettingsScreen.kt         ← صفحه تنظیمات
+
+tools/
+├── generate_index.html                    ← ابزار HTML (بدون نصب)
+└── generate_index_json.py                 ← اسکریپت پایتون
+```
+
+---
+
+## ⚙️ تنظیمات اپ
+
+- **فاصله بین فایل‌ها:** از صفحه تنظیمات قابل تغییر (۲۰، ۳۰، ۴۵، ۶۰ ثانیه)
+- **نسخه اپ:** در فوتر صفحه تنظیمات نمایش داده میشه (خودکار از بیلد)
+- **قفل تمرین‌ها:** زنجیره‌ای - هر تمرین بعد از اتمام تمرین قبلی باز میشه
+
+---
+
+## 📝 تغییرات
+
+### تغییر آدرس هاست:
+`SyncConfig.kt` → خط `HOST_BASE_URL` → بیلد مجدد
+
+### اضافه/حذف تمرین:
+فایل `index.json` روی هاست رو ویرایش کن — نیازی به بیلد مجدد اپ نیست
+
+### تغییر فایل‌های صوتی:
+فایل جدید روی هاست آپلود کن + لینکش رو در `index.json` آپدیت کن
