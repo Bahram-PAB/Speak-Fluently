@@ -17,15 +17,15 @@ android {
     applicationId = "com.aistudio.speakfluently.lzvywq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
+    versionCode = 106
     versionName = "1.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
     buildConfigField("String", "VERSION_NAME", "\"1.0.0\"")
-    buildConfigField("String", "VERSION_CODE", "\"1\"")
-    buildConfigField("String", "GIT_COMMIT", "\"${providers.exec { commandLine("git", "rev-parse", "--short", "HEAD").isIgnoreExitValue = true }.standardOutput.asText.get().trim().ifEmpty { "unknown" }}\"")
-    buildConfigField("String", "BUILD_TIME", "\"${providers.exec { commandLine("date", "-u", "+%Y-%m-%d %H:%M").isIgnoreExitValue = true }.standardOutput.asText.get().trim().ifEmpty { "unknown" }}\"")
+    buildConfigField("String", "VERSION_CODE", "\"106\"")
+    buildConfigField("String", "GIT_COMMIT", "\"latest\"")
+    buildConfigField("String", "BUILD_TIME", "\"${System.currentTimeMillis()}\"")
   }
 
   lint {
@@ -53,6 +53,7 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
       val releaseKeystore = signingConfigs.getByName("release").storeFile
       if (releaseKeystore != null && releaseKeystore.exists()) {
         signingConfig = signingConfigs.getByName("release")
