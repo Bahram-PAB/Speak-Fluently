@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>تولید index.json برای Speak-Fluently</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #e94560; text-align: center; margin-bottom: 20px; }
+        .card { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 6px; color: #aaa; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #333; border-radius: 8px; background: #0f3460; color: #fff; font-size: 16px; direction: ltr; }
+        .folder-input { position: relative; }
+        .folder-input input { cursor: pointer; }
+        .btn { background: #e94560; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn:hover { background: #c73650; }
+        .btn:disabled { background: #555; cursor: not-allowed; }
+        #output { background: #0f3460; border-radius: 8px; padding: 15px; font-family: 'Consolas', monospace; font-size: 13px; direction: ltr; text-align: left; white-space: pre-wrap; max-height: 400px; overflow-y: auto; display: none; border: 1px solid #333; }
+        .stats { text-align: center; color: #aaa; margin-top: 10px; font-size: 14px; }
+        .step { color: #e94560; font-weight: bold; }
+        .note { color: #aaa; font-size: 13px; margin-top: 8px; line-height: 1.6; }
+        .hidden-input { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎵 تولید index.json</h1>
+
+    <div class="card">
+        <p class="step">مرحله ۱: آدرس هاست خود را وارد کنید</p>
+        <label>Base URL (مثال: https://mysite.com/audio)</label>
+        <input type="text" id="baseUrl" placeholder="https://mysite.com/audio" value="https://mysite.com/audio">
+    </div>
+
+    <div class="card">
+        <p class="step">مرحله ۲: فولدر فایل‌های صوتی را انتخاب کنید</p>
+        <p class="note">
+            ✅ هر نام فایلی آزاد است<br>
+            ✅ هر فرمتی قبول است (wav, mp3, m4a, ogg, flac)<br>
+            ✅ ساختار فولدر: فولدر اصلی / فولدر-تمرین / فایل-صوتی
+        </p>
+        <input type="file" id="folderInput" class="hidden-input" webkitdirectory directory multiple>
+        <button class="btn" onclick="document.getElementById('folderInput').click()" id="selectBtn">
+            📁 انتخاب فولدر صوتی‌ها
+        </button>
+        <div id="folderInfo" class="stats"></div>
+    </div>
+
+    <div class="card">
+        <button class="btn" onclick="generate()" id="generateBtn" disabled>
+            ⚡ تولید index.json
+        </button>
+    </div>
+
+    <div class="card" id="outputCard" style="display:none">
+        <p class="step">مرحله ۳: خروجی index.json</p>
+        <div id="output"></div>
+        <div class="stats" id="stats"></div>
+        <button class="btn" onclick="downloadJSON()" style="margin-top:10px">
+            💾 دانلود index.json
+        </button>
+        <button class="btn" onclick="copyJSON()" style="margin-top:10px; background:#0f3460;">
+            📋 کپی
+        </button>
+    </div>
+</div>
+
+<script>
+let filesData = [];
+let generatedJSON = '';
+
+const audioExts = ['.wav', '.mp3', '.m4a', '.ogg', '.flac', '.aac', '.wma'];
+
+document.getElementById('folderInput').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    const audioFiles = files.filter(f => {
+        const ext = '.' + f.name.split('.').pop().toLowerCase();
+        return audioExts.includes(ext);
+    });
+
+    // Group by parent folder
+    const grouped = {};
+    audioFiles.forEach(f => {
+        // Extract folder path relative to root
+        const parts = f.webkitRelativePath.split('/');
+        // Root folder is parts[0], exercise folder is parts[1], file is parts[2]
+        if (parts.length >= 3) {
+            const folderName = parts[1];
+            if (!grouped[folderName]) grouped[folderName] = [];
+            grouped[folderName].push({
+                file: f,
+                folderName: folderName,
+                fileName: f.name,
+                relativePath: parts.slice(1).join('/') // daily/1/speech-1.wav
+            });
+        }
+    });
+
+    if (Object.keys(grouped).length === 0) {
+        document.getElementById('folderInfo').textContent = '❌ فایل صوتی یافت نشد!';
+        return;
+    }
+
+    filesData = grouped;
+    const totalFiles = audioFiles.length;
+    const totalFolders = Object.keys(grouped).length;
+    document.getElementById('folderInfo').innerHTML =
+        `✅ ${totalFolders} تمرین | ${totalFiles} فایل صوتی یافت شد`;
+    document.getElementById('generateBtn').disabled = false;
+});
+
+function generate() {
+    const baseUrl = document.getElementById('baseUrl').value.replace(/\/+$/, '');
+
+    // Sort folders numerically
+    const sortedFolders = Object.keys(filesData).sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+        const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+        return numA - numB;
+    });
+
+    const exercises = sortedFolders.map((folderName, idx) => {
+        const exerciseId = parseInt(folderName.match(/\d+/)?.[0] || (idx + 1));
+        const files = filesData[folderName]
+            .sort((a, b) => a.fileName.localeCompare(b.fileName))
+            .map((f, fileIdx) => {
+                const url = `${baseUrl}/${f.relativePath}`;
+                const nameWithoutExt = f.fileName.replace(/\.[^.]+$/, '');
+                // Extract number from filename if exists
+                const num = nameWithoutExt.match(/\d+/)?.[0];
+                const title = num ? `سوال ${num}` : nameWithoutExt.replace(/[-_]/g, ' ');
+                return {
+                    id: fileIdx + 1,
+                    title: title,
+                    url: url
+                };
+            });
+
+        return {
+            id: exerciseId,
+            name: `تمرین روز ${exerciseId}`,
+            files: files
+        };
+    });
+
+    generatedJSON = JSON.stringify({ exercises }, null, 2);
+
+    document.getElementById('output').textContent = generatedJSON;
+    document.getElementById('output').style.display = 'block';
+    document.getElementById('outputCard').style.display = 'block';
+
+    const totalFiles = exercises.reduce((sum, ex) => sum + ex.files.length, 0);
+    document.getElementById('stats').innerHTML =
+        `📊 ${exercises.length} تمرین | ${totalFiles} فایل | حجم: ${(new Blob([generatedJSON]).size / 1024).toFixed(1)} KB`;
+}
+
+function downloadJSON() {
+    const blob = new Blob([generatedJSON], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'index.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+function copyJSON() {
+    navigator.clipboard.writeText(generatedJSON).then(() => {
+        alert('✅ کپی شد!');
+    });
+}
+</script>
+</body>
+</html>
