@@ -2,7 +2,7 @@ package com.example
 
 object SyncConfig {
     // ====== فقط این خط رو تغییر بده ======
-    const val HOST_BASE_URL = "https://mysite.com/audio"
+    const val HOST_BASE_URL = "https://gharibe.ir/aoudio"
     // =====================================
 
     // index.json از همین آدرس دانلود میشه
