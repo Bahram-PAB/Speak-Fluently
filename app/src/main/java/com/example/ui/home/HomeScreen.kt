@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.Lang
+import com.example.R
 import com.example.domain.model.Exercise
 import kotlinx.coroutines.delay
 
