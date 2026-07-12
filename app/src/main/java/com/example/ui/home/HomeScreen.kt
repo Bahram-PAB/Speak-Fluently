@@ -1,5 +1,7 @@
 package com.example.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,9 +21,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.Lang
 import com.example.domain.model.Exercise
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,14 +35,24 @@ fun HomeScreen(
 ) {
     val exercises by viewModel.exercises.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
+    var showSyncMessage by remember { mutableStateOf(false) }
+
+    // Auto-dismiss sync message after 10 seconds
+    LaunchedEffect(syncState) {
+        if (syncState is HomeViewModel.SyncState.Success) {
+            showSyncMessage = true
+            delay(10_000)
+            showSyncMessage = false
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تمرین‌های روزانه") },
+                title = { Text(Lang.t("daily_exercises")) },
                 actions = {
                     IconButton(onClick = { viewModel.sync() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "همگام‌سازی")
+                        Icon(Icons.Default.Refresh, contentDescription = Lang.t("sync"))
                     }
                 }
             )
@@ -50,7 +63,7 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "تنظیمات")
+                Icon(Icons.Default.Settings, contentDescription = Lang.t("settings"))
             }
         },
         floatingActionButtonPosition = FabPosition.End
@@ -60,27 +73,40 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when (syncState) {
-                is HomeViewModel.SyncState.Syncing -> {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            // Sync progress bar
+            if (syncState is HomeViewModel.SyncState.Syncing) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            // Sync completion/error message (auto-dismiss after 10s)
+            AnimatedVisibility(
+                visible = showSyncMessage && syncState is HomeViewModel.SyncState.Success,
+                exit = fadeOut()
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Text(
+                        text = (syncState as? HomeViewModel.SyncState.Success)?.message ?: "",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
-                is HomeViewModel.SyncState.Success -> {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                    ) {
-                        Text(text = (syncState as HomeViewModel.SyncState.Success).message, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
-                    }
+            }
+
+            if (syncState is HomeViewModel.SyncState.Error && !showSyncMessage) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Text(
+                        text = (syncState as HomeViewModel.SyncState.Error).message,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 }
-                is HomeViewModel.SyncState.Error -> {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Text(text = (syncState as HomeViewModel.SyncState.Error).message, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
-                    }
-                }
-                else -> {}
             }
 
             if (exercises.isEmpty()) {
@@ -88,12 +114,12 @@ fun HomeScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.GetApp, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = "هنوز تمرینی یافت نشد.\nبرای شروع دکمه همگام‌سازی را بزنید.", style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.outline)
+                        Text(text = Lang.t("no_exercises"), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.outline)
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.sync() }) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("همگام‌سازی")
+                            Text(Lang.t("sync"))
                         }
                     }
                 }
@@ -114,10 +140,8 @@ fun HomeScreen(
 
 @Composable
 fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
-    // Green for completed, surface for unlocked, muted for locked
     val containerColor = when {
-        exercise.isCompleted -> Color(0xFFE8F5E9) // Light green
-        exercise.isLocked -> MaterialTheme.colorScheme.surface
+        exercise.isCompleted -> Color(0xFFE8F5E9)
         else -> MaterialTheme.colorScheme.surface
     }
 
@@ -129,9 +153,7 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = if (exercise.isCompleted) {
             androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF4CAF50))
-        } else {
-            null
-        }
+        } else null
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -141,12 +163,12 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
                     else -> Icons.Default.LockOpen
                 },
                 contentDescription = when {
-                    exercise.isCompleted -> "تکمیل شده"
-                    exercise.isLocked -> "قفل شده"
-                    else -> "باز"
+                    exercise.isCompleted -> Lang.t("completed")
+                    exercise.isLocked -> Lang.t("locked")
+                    else -> Lang.t("unlocked")
                 },
                 tint = when {
-                    exercise.isCompleted -> Color(0xFF4CAF50) // Green
+                    exercise.isCompleted -> Color(0xFF4CAF50)
                     exercise.isLocked -> MaterialTheme.colorScheme.outline
                     else -> MaterialTheme.colorScheme.primary
                 },
@@ -160,25 +182,15 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${exercise.files.size} فایل صوتی",
+                    text = "${exercise.files.size} ${Lang.t("files_count")}",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (exercise.isCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline
                 )
             }
-            // Status indicator: arrow for unlocked, lock icon for locked (visual cue already on left)
             if (exercise.isCompleted) {
-                Text(
-                    text = "✓",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color(0xFF4CAF50),
-                    fontWeight = FontWeight.Bold
-                )
+                Text("✓", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
             } else if (!exercise.isLocked) {
-                Text(
-                    text = "→",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                Text("→", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.outline)
             }
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import com.example.Lang
 
 private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFF6750A4),
@@ -77,9 +78,9 @@ fun SpeakFluentlyTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    
-    // Wrap entire application content inside RTL layout direction for flawless Persian experience
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    val layoutDirection = if (Lang.isRtl()) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
         MaterialTheme(
             colorScheme = colorScheme,
             content = content
