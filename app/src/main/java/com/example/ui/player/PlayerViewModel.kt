@@ -57,8 +57,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (!ex.files.all { it.isDownloaded }) {
                     downloadFiles(ex)
                 }
-                // Fetch banner
-                _banner.value = bannerFetcher.fetch()
+                // Fetch banner for this exercise
+                _banner.value = bannerFetcher.fetch(ex.id)
             }
         }
     }
