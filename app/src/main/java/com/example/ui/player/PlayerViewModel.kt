@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.SettingsStore
+import com.example.data.remote.Banner
+import com.example.data.remote.BannerFetcher
 import com.example.data.repository.AudioExerciseRepository
 import com.example.domain.model.Exercise
 import kotlinx.coroutines.delay
@@ -12,10 +14,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AudioExerciseRepository.getInstance(application)
     private val settingsStore = SettingsStore(application)
+    private val bannerFetcher = BannerFetcher(OkHttpClient())
 
     private val _exercise = MutableStateFlow<Exercise?>(null)
     val exercise: StateFlow<Exercise?> = _exercise
@@ -29,6 +33,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
+    // Banner state
+    private val _banner = MutableStateFlow<Banner?>(null)
+    val banner: StateFlow<Banner?> = _banner.asStateFlow()
+
     // Interval timer state
     private val _intervalRemaining = MutableStateFlow(0)
     val intervalRemaining: StateFlow<Int> = _intervalRemaining.asStateFlow()
@@ -36,7 +44,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _isIntervalActive = MutableStateFlow(false)
     val isIntervalActive: StateFlow<Boolean> = _isIntervalActive.asStateFlow()
 
-    // Signal for PlayerScreen to auto-play the next file
     private val _autoPlaySignal = MutableStateFlow(0)
     val autoPlaySignal: StateFlow<Int> = _autoPlaySignal.asStateFlow()
 
@@ -46,8 +53,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val ex = exercises.find { it.id == exerciseId }
             _exercise.value = ex
             _currentFileIndex.value = 0
-            if (ex != null && !ex.files.all { it.isDownloaded }) {
-                downloadFiles(ex)
+            if (ex != null) {
+                if (!ex.files.all { it.isDownloaded }) {
+                    downloadFiles(ex)
+                }
+                // Fetch banner
+                _banner.value = bannerFetcher.fetch()
             }
         }
     }
@@ -71,10 +82,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val nextIndex = _currentFileIndex.value + 1
 
         if (nextIndex < ex.files.size) {
-            // Start interval countdown, then auto-play next file
             startIntervalThenPlay(nextIndex)
         } else {
-            // Last file completed
             _playbackState.value = PlaybackState.Completed
             viewModelScope.launch {
                 repository.markCompleted(ex.id)
@@ -87,16 +96,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val interval = settingsStore.getInterval().first()
             _isIntervalActive.value = true
-
-            // Countdown
             for (i in interval downTo 1) {
                 _intervalRemaining.value = i
                 delay(1000)
             }
             _intervalRemaining.value = 0
             _isIntervalActive.value = false
-
-            // Move to next file and signal auto-play
             _currentFileIndex.value = nextIndex
             _autoPlaySignal.value = _autoPlaySignal.value + 1
         }
@@ -105,6 +110,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setPlaying() { _playbackState.value = PlaybackState.Playing }
     fun setPaused() { _playbackState.value = PlaybackState.Paused }
     fun setIdle() { _playbackState.value = PlaybackState.Idle }
+
+    fun onBannerClick() {
+        _banner.value?.url?.let { url ->
+            // Handled in PlayerScreen
+        }
+    }
 
     enum class PlaybackState { Idle, Playing, Paused, Completed }
     sealed class DownloadState {

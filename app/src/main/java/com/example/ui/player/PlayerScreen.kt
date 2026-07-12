@@ -1,6 +1,8 @@
 package com.example.ui.player
 
+import android.content.Intent
 import android.media.MediaPlayer
+import android.net.Uri
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +46,8 @@ fun PlayerScreen(
     val intervalRemaining by viewModel.intervalRemaining.collectAsState()
     val isIntervalActive by viewModel.isIntervalActive.collectAsState()
     val autoPlaySignal by viewModel.autoPlaySignal.collectAsState()
+    val banner by viewModel.banner.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(exerciseId) { viewModel.loadExercise(exerciseId) }
 
@@ -77,7 +83,7 @@ fun PlayerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(exercise?.name ?: " ") },
+                title = { Text(exercise?.name ?: "") },
                 navigationIcon = {
                     IconButton(onClick = { mediaPlayer?.release(); mediaPlayer = null; onBackToHome() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = Lang.t("back"))
@@ -134,6 +140,51 @@ fun PlayerScreen(
                     }
                 }
             }
+
+            // ===== BANNER SECTION =====
+            if (banner != null && !isIntervalActive) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = banner?.url != null) {
+                            banner?.url?.let { url ->
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = banner?.text ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (banner?.url != null) {
+                            Text(
+                                "→",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+            // ===========================
 
             Spacer(modifier = Modifier.weight(1f))
 

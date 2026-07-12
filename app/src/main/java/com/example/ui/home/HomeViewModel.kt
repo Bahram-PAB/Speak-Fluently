@@ -3,6 +3,7 @@ package com.example.ui.home
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.Lang
 import com.example.data.repository.AudioExerciseRepository
 import com.example.domain.model.Exercise
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,10 +34,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _syncState.value = SyncState.Syncing
             repository.sync()
                 .onSuccess { count ->
-                    _syncState.value = SyncState.Success("همگام‌سازی انجام شد. $count تمرین یافت شد.")
+                    val msg = if (Lang.current == Lang.Language.EN)
+                        "Sync completed. $count exercises found."
+                    else
+                        "همگام‌سازی انجام شد. $count تمرین یافت شد."
+                    _syncState.value = SyncState.Success(msg)
                 }
                 .onFailure { error ->
-                    _syncState.value = SyncState.Error("خطا در همگام‌سازی: ${error.message}")
+                    val msg = if (Lang.current == Lang.Language.EN)
+                        "Sync error: ${error.message}"
+                    else
+                        "خطا در همگام‌سازی: ${error.message}"
+                    _syncState.value = SyncState.Error(msg)
                 }
         }
     }
