@@ -33,14 +33,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
-    // Banner state
-    private val _banner = MutableStateFlow<Banner?>(null)
-    val banner: StateFlow<Banner?> = _banner.asStateFlow()
+    // Banners — all matching
+    private val _banners = MutableStateFlow<List<Banner>>(emptyList())
+    val banners: StateFlow<List<Banner>> = _banners.asStateFlow()
 
-    // Interval timer state
+    // Interval timer
     private val _intervalRemaining = MutableStateFlow(0)
     val intervalRemaining: StateFlow<Int> = _intervalRemaining.asStateFlow()
-
     private val _isIntervalActive = MutableStateFlow(false)
     val isIntervalActive: StateFlow<Boolean> = _isIntervalActive.asStateFlow()
 
@@ -57,8 +56,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (!ex.files.all { it.isDownloaded }) {
                     downloadFiles(ex)
                 }
-                // Fetch banner for this exercise
-                _banner.value = bannerFetcher.fetch(ex.id)
+                // Fetch ALL matching banners for this exercise
+                _banners.value = bannerFetcher.fetchAll(ex.id)
             }
         }
     }
@@ -80,7 +79,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun onFileComplete() {
         val ex = _exercise.value ?: return
         val nextIndex = _currentFileIndex.value + 1
-
         if (nextIndex < ex.files.size) {
             startIntervalThenPlay(nextIndex)
         } else {
@@ -110,12 +108,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setPlaying() { _playbackState.value = PlaybackState.Playing }
     fun setPaused() { _playbackState.value = PlaybackState.Paused }
     fun setIdle() { _playbackState.value = PlaybackState.Idle }
-
-    fun onBannerClick() {
-        _banner.value?.url?.let { url ->
-            // Handled in PlayerScreen
-        }
-    }
 
     enum class PlaybackState { Idle, Playing, Paused, Completed }
     sealed class DownloadState {

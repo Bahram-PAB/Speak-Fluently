@@ -1,7 +1,9 @@
 package com.example.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,7 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -73,9 +78,9 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Sync progress bar
+            // Sync progress — animated logo
             if (syncState is HomeViewModel.SyncState.Syncing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                SyncLoadingIndicator()
             }
 
             // Sync completion/error message (auto-dismiss after 10s)
@@ -192,6 +197,50 @@ fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
             } else if (!exercise.isLocked) {
                 Text("→", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.outline)
             }
+        }
+    }
+}
+
+@Composable
+private fun SyncLoadingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "sync")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "logoScale"
+    )
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "logoAlpha"
+    )
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(id = com.example.R.drawable.splash_logo),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(80.dp)
+                    .scale(scale)
+                    .alpha(alpha)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                Lang.t("syncing"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

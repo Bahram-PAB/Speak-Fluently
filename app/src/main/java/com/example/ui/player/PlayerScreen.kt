@@ -46,7 +46,7 @@ fun PlayerScreen(
     val intervalRemaining by viewModel.intervalRemaining.collectAsState()
     val isIntervalActive by viewModel.isIntervalActive.collectAsState()
     val autoPlaySignal by viewModel.autoPlaySignal.collectAsState()
-    val banner by viewModel.banner.collectAsState()
+    val banners by viewModel.banners.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(exerciseId) { viewModel.loadExercise(exerciseId) }
@@ -141,50 +141,52 @@ fun PlayerScreen(
                 }
             }
 
-            // ===== BANNER SECTION =====
-            if (banner != null && !isIntervalActive) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = banner?.url != null) {
-                            banner?.url?.let { url ->
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            }
-                        },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+            // ===== BANNERS SECTION (all matching) =====
+            if (banners.isNotEmpty() && !isIntervalActive) {
+                banners.forEach { banner ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = banner.hasUrl) {
+                                banner.url?.let { url ->
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                }
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        elevation = CardDefaults.cardElevation(1.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = banner?.text ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (banner?.url != null) {
-                            Text(
-                                "→",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.Bold
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(20.dp)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = banner.text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (banner.hasUrl) {
+                                Text(
+                                    "→",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
             }
-            // ===========================
+            // ===========================================
 
             Spacer(modifier = Modifier.weight(1f))
 

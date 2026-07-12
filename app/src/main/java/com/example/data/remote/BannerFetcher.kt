@@ -13,7 +13,6 @@ data class Banner(
     val enabled: Boolean,
     val days: List<Int>
 ) {
-    /** Get display text based on current language */
     val text: String get() = if (Lang.current == Lang.Language.EN) textEn else textFa
     val hasUrl: Boolean get() = !url.isNullOrEmpty()
 }
@@ -21,10 +20,10 @@ data class Banner(
 class BannerFetcher(private val client: OkHttpClient) {
 
     /**
-     * Fetch banners from host and filter by exercise ID.
-     * Returns the first matching enabled banner, or null.
+     * Fetch ALL matching banners for the given exercise ID.
+     * Returns every enabled banner whose "day" list contains exerciseId.
      */
-    fun fetch(exerciseId: Int): Banner? {
+    fun fetchAll(exerciseId: Int): List<Banner> {
         return try {
             val request = Request.Builder()
                 .url("${SyncConfig.HOST_BASE_URL}/banner.json")
@@ -33,16 +32,16 @@ class BannerFetcher(private val client: OkHttpClient) {
 
             val response = client.newCall(request).execute()
             try {
-                if (!response.isSuccessful) return null
-                val body = response.body?.string() ?: return null
-                if (body.isEmpty()) return null
+                if (!response.isSuccessful) return emptyList()
+                val body = response.body?.string() ?: return emptyList()
+                if (body.isEmpty()) return emptyList()
 
-                parseBanners(body).firstOrNull { it.enabled && exerciseId in it.days }
+                parseBanners(body).filter { it.enabled && exerciseId in it.days }
             } finally {
                 response.close()
             }
         } catch (_: Exception) {
-            null
+            emptyList()
         }
     }
 
@@ -58,8 +57,6 @@ class BannerFetcher(private val client: OkHttpClient) {
                 val textFa = obj.optString("text_fa", "")
                 val textEn = obj.optString("text_en", "")
                 val url = obj.optString("url", "").ifEmpty { null }
-
-                // Parse "day" field — supports both comma-separated string and array
                 val days = parseDays(obj)
 
                 if (textFa.isNotEmpty() || textEn.isNotEmpty()) {
@@ -70,11 +67,9 @@ class BannerFetcher(private val client: OkHttpClient) {
         return result
     }
 
-    /** Parse "day" field: "2,3,5" or [2,3,5] or 2,3,5 */
     private fun parseDays(obj: JSONObject): List<Int> {
         val days = mutableListOf<Int>()
         val dayRaw = obj.opt("day") ?: return emptyList()
-
         when (dayRaw) {
             is org.json.JSONArray -> {
                 for (i in 0 until dayRaw.length()) {
