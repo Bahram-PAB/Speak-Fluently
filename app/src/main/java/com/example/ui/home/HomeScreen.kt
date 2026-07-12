@@ -35,8 +35,10 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToExercise: (Int) -> Unit,
-    onNavigateToSettings: () -> Unit = {},
+    onExerciseClick: (Int) -> Unit,
+    onSettingsClick: () -> Unit = {},
+    intervalVersion: Int = 0,
+    onIntervalChanged: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val exercises by viewModel.exercises.collectAsState()
@@ -65,7 +67,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onNavigateToSettings,
+                onClick = onSettingsClick,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ) {
