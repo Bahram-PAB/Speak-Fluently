@@ -1,6 +1,7 @@
 package com.example.data.remote
 
 import com.example.SyncConfig
+import com.example.Lang
 import com.example.domain.model.Exercise
 import com.example.domain.model.ExerciseFile
 import okhttp3.OkHttpClient
@@ -10,11 +11,6 @@ import java.io.IOException
 
 class GithubTreeApi(private val client: OkHttpClient) {
 
-    /**
-     * Fetch exercises from index.json on the configured host.
-     * Any audio file format is accepted (wav, mp3, m4a, ogg, flac, etc.)
-     * File naming is completely flexible - no naming convention required.
-     */
     @Throws(IOException::class)
     fun fetchExercises(): List<Exercise> {
         val request = Request.Builder()
@@ -27,10 +23,8 @@ class GithubTreeApi(private val client: OkHttpClient) {
             if (!response.isSuccessful) {
                 throw IOException("Host API failed: ${response.code} ${response.message}")
             }
-
             val bodyString = response.body?.string() ?: return emptyList()
             if (bodyString.isEmpty()) return emptyList()
-
             return parseIndexJson(bodyString)
         } finally {
             response.close()
@@ -45,34 +39,54 @@ class GithubTreeApi(private val client: OkHttpClient) {
         for (i in 0 until exercisesArray.length()) {
             val exerciseObj = exercisesArray.getJSONObject(i)
             val id = exerciseObj.optInt("id", i + 1)
-            val name = exerciseObj.optString("name", "تمرین روز $id")
+            val rawName = exerciseObj.optString("name", "")
+            val name = translateExerciseName(rawName, id)
             val filesArray = exerciseObj.optJSONArray("files") ?: continue
 
             val files = mutableListOf<ExerciseFile>()
             for (j in 0 until filesArray.length()) {
                 val fileObj = filesArray.getJSONObject(j)
                 val fileId = fileObj.optInt("id", j + 1)
-                val title = fileObj.optString("title", "فایل $fileId")
+                val rawTitle = fileObj.optString("title", "")
+                val title = translateFileTitle(rawTitle, fileId)
                 val url = fileObj.optString("url", "")
 
                 if (url.isNotEmpty()) {
-                    files.add(ExerciseFile(
-                        id = fileId,
-                        title = title,
-                        audioUrl = url
-                    ))
+                    files.add(ExerciseFile(id = fileId, title = title, audioUrl = url))
                 }
             }
 
             if (files.isNotEmpty()) {
-                result.add(Exercise(
-                    id = id,
-                    name = name,
-                    files = files.sortedBy { it.id }
-                ))
+                result.add(Exercise(id = id, name = name, files = files.sortedBy { it.id }))
             }
         }
-
         return result.sortedBy { it.id }
+    }
+
+    /**
+     * Translate "تمرین روز 5" → "Day 5" (when English), keep as-is for Persian.
+     * Pattern: "تمرین روز {number}" ↔ "Day {number}"
+     */
+    private fun translateExerciseName(raw: String, id: Int): String {
+        if (Lang.current == Lang.Language.FA) return raw.ifEmpty { "تمرین روز $id" }
+        // English: extract number from Persian pattern or use id
+        val num = extractNumber(raw) ?: id
+        return "Day $num"
+    }
+
+    /**
+     * Translate "سوال 3" → "Question 3" (when English), keep as-is for Persian.
+     * Pattern: "سوال {number}" ↔ "Question {number}"
+     */
+    private fun translateFileTitle(raw: String, id: Int): String {
+        if (Lang.current == Lang.Language.FA) return raw.ifEmpty { "فایل $id" }
+        val num = extractNumber(raw) ?: id
+        return "Question $num"
+    }
+
+    /** Extract the last number from a string like "تمرین روز 5" → 5 */
+    private fun extractNumber(s: String): Int? {
+        val match = Regex("\\d+").findAll(s).lastOrNull()
+        return match?.value?.toIntOrNull()
     }
 }
