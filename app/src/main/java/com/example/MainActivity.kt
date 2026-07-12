@@ -45,7 +45,6 @@ class MainActivity : ComponentActivity() {
                             SplashScreen(onFinished = { showSplash = false })
                         } else {
                             var screen by remember { mutableStateOf<Screen>(Screen.Home) }
-                            var intervalVersion by remember { mutableIntStateOf(0) }
                             val settingsVm = remember { SettingsViewModel(context.applicationContext as android.app.Application) }
 
                             LaunchedEffect(Unit) {
@@ -60,8 +59,6 @@ class MainActivity : ComponentActivity() {
                                 is Screen.Home -> HomeScreen(
                                     onExerciseClick = { id -> screen = Screen.Player(id) },
                                     onSettingsClick = { screen = Screen.Settings },
-                                    intervalVersion = intervalVersion,
-                                    onIntervalChanged = { intervalVersion++ }
                                 )
                                 is Screen.Player -> PlayerScreen(exerciseId = s.id, onBackToHome = { screen = Screen.Home })
                                 is Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Home }, onLanguageChanged = { languageVersion++ })
