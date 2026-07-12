@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.speakfluently.lzvywq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 110
-    versionName = "1.1.0"
+    versionCode = 122
+    versionName = "1.2.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
