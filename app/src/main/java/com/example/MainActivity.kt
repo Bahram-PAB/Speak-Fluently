@@ -19,6 +19,7 @@ import com.example.ui.splash.SplashScreen
 import com.example.ui.theme.SpeakFluentlyTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
