@@ -1,22 +1,32 @@
 package com.example.ui.player
 
 import android.media.MediaPlayer
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,21 +43,16 @@ fun PlayerScreen(
     val intervalRemaining by viewModel.intervalRemaining.collectAsState()
     val isIntervalActive by viewModel.isIntervalActive.collectAsState()
     val autoPlaySignal by viewModel.autoPlaySignal.collectAsState()
-    val context = LocalContext.current
 
     LaunchedEffect(exerciseId) {
         viewModel.loadExercise(exerciseId)
     }
 
-    // MediaPlayer state
     var isPlaying by remember { mutableStateOf(false) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-
-    // Get current file
     val ex = exercise
     val currentFile = ex?.files?.getOrNull(currentIndex)
 
-    // Auto-play: when autoPlaySignal changes and interval is done, start playing
     LaunchedEffect(autoPlaySignal) {
         if (autoPlaySignal > 0 && currentFile != null) {
             val localFile = currentFile.localFile
@@ -68,7 +73,6 @@ fun PlayerScreen(
         }
     }
 
-    // Cleanup on file change or dispose
     DisposableEffect(currentFile) {
         onDispose {
             mediaPlayer?.release()
@@ -76,6 +80,15 @@ fun PlayerScreen(
             isPlaying = false
         }
     }
+
+    // Progress indicator animation
+    val progress = if (ex != null && ex.files.isNotEmpty())
+        (currentIndex + 1).toFloat() / ex.files.size.toFloat() else 0f
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        label = "progress"
+    )
 
     Scaffold(
         topBar = {
@@ -89,7 +102,10 @@ fun PlayerScreen(
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "بازگشت")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { padding ->
@@ -97,28 +113,47 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Download state
             when (downloadState) {
                 is PlayerViewModel.DownloadState.Downloading -> {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("در حال دانلود فایل‌ها...")
+                    Spacer(modifier = Modifier.height(60.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(64.dp),
+                        strokeWidth = 4.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        "در حال دانلود فایل‌ها...",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     return@Column
                 }
                 is PlayerViewModel.DownloadState.Error -> {
                     Card(
+                        modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
+                        ),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = (downloadState as PlayerViewModel.DownloadState.Error).message,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            modifier = Modifier.padding(20.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
                     return@Column
@@ -128,143 +163,228 @@ fun PlayerScreen(
 
             if (ex == null || currentFile == null) return@Column
 
-            // Interval timer countdown card
-            if (isIntervalActive) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Timer,
-                            contentDescription = "تایمر",
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "$intervalRemaining ثانیه تا فایل بعدی...",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            // Progress bar
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
 
-            // File counter
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Counter
             Text(
-                text = "${currentIndex + 1} / ${ex.files.size}",
-                style = MaterialTheme.typography.headlineSmall,
+                text = "${currentIndex + 1} از ${ex.files.size}",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // File title
-            Text(
-                text = currentFile.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
+            // Interval timer or file title
+            if (isIntervalActive) {
+                // Timer countdown card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "$intervalRemaining",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "ثانیه تا فایل بعدی",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            } else {
+                // File title card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = currentFile.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             // Controls
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Skip button
-                FilledTonalButton(
+                FilledTonalIconButton(
                     onClick = {
                         mediaPlayer?.release()
                         mediaPlayer = null
                         isPlaying = false
                         viewModel.onFileComplete()
                     },
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(56.dp),
                     shape = CircleShape,
                     enabled = !isIntervalActive
                 ) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "رد شدن")
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = "رد شدن",
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
 
                 // Play/Pause button
-                LargeFloatingActionButton(
-                    onClick = {
-                        if (isIntervalActive) return@LargeFloatingActionButton
-
-                        if (isPlaying) {
-                            mediaPlayer?.pause()
-                            isPlaying = false
-                            viewModel.setPaused()
-                        } else {
-                            val localFile = currentFile.localFile
-                            if (localFile != null && localFile.exists()) {
-                                mediaPlayer?.release()
-                                mediaPlayer = MediaPlayer().apply {
-                                    setDataSource(localFile.absolutePath)
-                                    prepare()
-                                    start()
-                                    setOnCompletionListener {
-                                        isPlaying = false
-                                        viewModel.onFileComplete()
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .shadow(12.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
+                            )
+                        )
+                        .clickable(enabled = !isIntervalActive) {
+                            if (isPlaying) {
+                                mediaPlayer?.pause()
+                                isPlaying = false
+                                viewModel.setPaused()
+                            } else {
+                                val localFile = currentFile.localFile
+                                if (localFile != null && localFile.exists()) {
+                                    mediaPlayer?.release()
+                                    mediaPlayer = MediaPlayer().apply {
+                                        setDataSource(localFile.absolutePath)
+                                        prepare()
+                                        start()
+                                        setOnCompletionListener {
+                                            isPlaying = false
+                                            viewModel.onFileComplete()
+                                        }
                                     }
+                                    isPlaying = true
+                                    viewModel.setPlaying()
                                 }
-                                isPlaying = true
-                                viewModel.setPlaying()
                             }
-                        }
-                    },
-                    shape = CircleShape,
-                    modifier = Modifier.size(80.dp)
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "توقف" else "پخش",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(44.dp),
+                        tint = Color.White
                     )
                 }
+
+                // Spacer to balance layout
+                Spacer(modifier = Modifier.size(56.dp))
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Status
+            // Status text or completion card
             when (playbackState) {
                 PlayerViewModel.PlaybackState.Completed -> {
                     Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                mediaPlayer?.release()
+                                mediaPlayer = null
+                                onBackToHome()
+                            },
+                        shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+                            containerColor = Color(0xFF2E7D32)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Text(
-                            text = "✅ تمرین تکمیل شد!",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "تمرین تکمیل شد!",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "برای بازگشت کلیک کنید",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
                 else -> {
                     Text(
-                        text = if (isIntervalActive) "فایل بعدی به صورت خودکار پخش می‌شود..."
-                               else "گوش دهید، تکرار کنید",
+                        text = if (isIntervalActive) "⏳ فایل بعدی به صورت خودکار پخش می‌شود..."
+                               else "🎧 گوش دهید، تکرار کنید",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
