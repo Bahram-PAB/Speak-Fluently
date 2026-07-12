@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
             val lang = remember(languageVersion) { Lang.Language.entries.first { it.code == langCode } }
             val context = LocalContext.current
 
-            CompositionLocalProvider(LocalLayoutDirection provides if (lang.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+            CompositionLocalProvider(LocalLayoutDirection provides if (Lang.isRtl()) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 var showSplash by remember { mutableStateOf(true) }
 
                 SpeakFluentlyTheme(darkTheme = true) {
