@@ -138,7 +138,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(exercises) { exercise ->
-                        ExerciseCard(exercise = exercise, onClick = { onNavigateToExercise(exercise.id) })
+                        ExerciseCard(exercise = exercise, onClick = { onExerciseClick(exercise.id) })
                     }
                 }
             }

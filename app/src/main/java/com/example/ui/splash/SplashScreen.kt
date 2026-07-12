@@ -93,7 +93,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                 text = "Speak Fluently",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White.copy(alpha = textAlpha.value)
+                color = Color.White.copy(alpha = textAlpha)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
