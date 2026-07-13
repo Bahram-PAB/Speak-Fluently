@@ -17,13 +17,13 @@ android {
     applicationId = "com.aistudio.speakfluently.lzvywq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 123
-    versionName = "1.3.0"
+    versionCode = 124
+    versionName = "1.4.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-    buildConfigField("String", "VERSION_NAME", "\"1.3.0\"")
-    buildConfigField("String", "VERSION_CODE", "\"123\"")
+    buildConfigField("String", "VERSION_NAME", "\"1.4.0\"")
+    buildConfigField("String", "VERSION_CODE", "\"124\"")
     buildConfigField("String", "GIT_COMMIT", "\"latest\"")
     buildConfigField("String", "BUILD_TIME", "\"${System.currentTimeMillis()}\"")
   }
