@@ -53,7 +53,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val exercises = repository.getExercises().first()
             val ex = exercises.find { it.id == exerciseId }
             _exercise.value = ex
-            _currentFileIndex.value = 0
+            val savedIndex = settingsStore.getPlaybackPosition(exerciseId)
+            _currentFileIndex.value = savedIndex
             if (ex != null) {
                 if (!ex.files.all { it.isDownloaded }) {
                     downloadFiles(ex)
@@ -87,6 +88,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             _playbackState.value = PlaybackState.Completed
             viewModelScope.launch {
                 repository.markCompleted(ex.id)
+                settingsStore.savePlaybackPosition(ex.id, 0)
                 _exercise.value = ex.copy(isCompleted = true)
             }
         }
@@ -103,6 +105,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             _intervalRemaining.value = 0
             _isIntervalActive.value = false
             _currentFileIndex.value = nextIndex
+            _exercise.value?.let { settingsStore.savePlaybackPosition(it.id, nextIndex) }
             _autoPlaySignal.value = _autoPlaySignal.value + 1
         }
     }

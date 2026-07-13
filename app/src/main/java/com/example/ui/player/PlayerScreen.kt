@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import com.example.Lang
 fun PlayerScreen(
     exerciseId: Int,
     onBackToHome: () -> Unit,
+    BackHandler { onBackToHome() }
     viewModel: PlayerViewModel = viewModel()
 ) {
     val exercise by viewModel.exercise.collectAsState()
