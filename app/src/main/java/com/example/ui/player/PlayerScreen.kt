@@ -38,7 +38,6 @@ import com.example.Lang
 fun PlayerScreen(
     exerciseId: Int,
     onBackToHome: () -> Unit,
-    BackHandler { onBackToHome() }
     viewModel: PlayerViewModel = viewModel()
 ) {
     val exercise by viewModel.exercise.collectAsState()
@@ -50,6 +49,7 @@ fun PlayerScreen(
     val autoPlaySignal by viewModel.autoPlaySignal.collectAsState()
     val banners by viewModel.banners.collectAsState()
     val context = LocalContext.current
+    BackHandler { onBackToHome() }
 
     LaunchedEffect(exerciseId) { viewModel.loadExercise(exerciseId) }
 

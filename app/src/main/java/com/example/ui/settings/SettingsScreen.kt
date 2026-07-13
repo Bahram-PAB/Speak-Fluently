@@ -43,13 +43,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    BackHandler { onBack() }
     onLanguageChanged: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     val interval by viewModel.interval.collectAsState(initial = SettingsStore.DEFAULT_INTERVAL)
     val language by viewModel.language.collectAsState(initial = Lang.Language.FA.code)
     val context = LocalContext.current
+    BackHandler { onBack() }
 
     Scaffold(
         topBar = {
