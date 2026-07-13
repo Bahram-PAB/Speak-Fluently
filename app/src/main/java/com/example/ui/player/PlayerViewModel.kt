@@ -10,6 +10,8 @@ import com.example.data.repository.AudioExerciseRepository
 import com.example.domain.model.Exercise
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -57,7 +59,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     downloadFiles(ex)
                 }
                 // Fetch ALL matching banners for this exercise
-                _banners.value = bannerFetcher.fetchAll(ex.id)
+                withContext(Dispatchers.IO) { _banners.value = bannerFetcher.fetchAll(ex.id) }
             }
         }
     }
