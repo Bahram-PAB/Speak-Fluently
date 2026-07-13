@@ -55,8 +55,9 @@ class SettingsStore(private val context: Context) {
         val code = context.settingsDataStore.data.first()[LANGUAGE_KEY] ?: Lang.Language.FA.code
         Lang.current = Lang.Language.entries.find { it.code == code } ?: Lang.Language.FA
     }
-}// --- Playback position ---
-    fun playbackKey(exerciseId: Int) = intPreferencesKey("playback_$exerciseId")
+
+    // --- Playback position ---
+    private fun playbackKey(exerciseId: Int) = intPreferencesKey("playback_$exerciseId")
 
     suspend fun savePlaybackPosition(exerciseId: Int, fileIndex: Int) {
         context.settingsDataStore.edit { prefs -> prefs[playbackKey(exerciseId)] = fileIndex }
@@ -65,3 +66,4 @@ class SettingsStore(private val context: Context) {
     suspend fun getPlaybackPosition(exerciseId: Int): Int {
         return context.settingsDataStore.data.first()[playbackKey(exerciseId)] ?: 0
     }
+}
